@@ -19,14 +19,26 @@
  * 100% relocatable.  Any attempt to do so will result in a crash.
  * Please select one of the following when turning on debugging.
  */
+///TP:
+/// macros for debugging
+/// depending arm architecture, hw debugger, define loadsp, writeb macros
+/// if no hw debugger config, include related assembly 
+/// loadsp: sp for dump (memory/message...). 
+///       for hw debugger(ICEDCC),      no need. 
+///       for sw debugger(else),  get uart address
+/// writeb: put 8b data into sp; print out 8b data(character)
+///       for hw debugger(ICEDCC),      send 8b data using coprocessor(cp14) 
+///       for sw debugger(else),        send 8b data using uart
 #ifdef DEBUG
 
 #if defined(CONFIG_DEBUG_ICEDCC)
 
 #if defined(CONFIG_CPU_V6) || defined(CONFIG_CPU_V6K) || defined(CONFIG_CPU_V7)
+    ///TP: .macro <macro_name> arguments...
 		.macro	loadsp, rb, tmp
 		.endm
 		.macro	writeb, ch, rb
+    ///TP: need '\' prefix for arguments
 		mcr	p14, 0, \ch, c0, c5, 0
 		.endm
 #elif defined(CONFIG_CPU_XSCALE)
@@ -43,8 +55,9 @@
 		.endm
 #endif
 
-#else
+#else   ///TP: CONFIG_DEBUG_ICEDCC
 
+///TP: include proper assembly for each target
 #include CONFIG_DEBUG_LL_INCLUDE
 
 		.macro	writeb,	ch, rb
@@ -71,13 +84,15 @@
 		.endm
 #endif
 #endif
-#endif
+#endif    ///TP: #ifdef DEBUG
 
+    ///TP: print character
 		.macro	kputc,val
 		mov	r0, \val
 		bl	putc
 		.endm
 
+    ///TP: print hex value with length
 		.macro	kphex,val,len
 		mov	r0, \val
 		mov	r1, #\len
@@ -118,29 +133,47 @@
 /*
  * sort out different calling conventions
  */
+    ///TP: align memory: default: 4B
 		.align
-		.arm				@ Always enter in ARM state
+		.arm				@ Always enter in ARM state ///TP: not true, cortex-m does support only Thumb2, not ARM
 start:
 		.type	start,#function
+    ///TP: why do nop for 7clk? 
+    /// some old bootloader boots image from 0x20(8*4B) offset
+    /// it does not support thumb, thumb start from 4B earlier
+    /// for thumb boot we don't need 7 cycle delay
+    /// ref:
+    ///     - http://www.iamroot.org/xe/QnA/23099
+    ///     - http://comments.gmane.org/gmane.linux.ports.arm.kernel/26690
 		.rept	7
 		mov	r0, r0
 		.endr
+    ///TP: if CONFIG_THUMB2_KERNEL, THUMB() is valid, otherwise ARM() is valid 
    ARM(		mov	r0, r0		)
    ARM(		b	1f		)
- THUMB(		adr	r12, BSYM(1f)	)
- THUMB(		bx	r12		)
+ THUMB(		adr	r12, BSYM(1f)	)       ///TP: 4B
+ THUMB(		bx	r12		)               ///TP: 4B
 
-		.word	0x016f2818		@ Magic numbers to help the loader
-		.word	start			@ absolute load/run zImage address
-		.word	_edata			@ zImage end address
+		.word	0x016f2818		@ Magic numbers to help the loader  ///TP: bootloader can check this is valid kernel image using this magic number
+    ///TP: defined in arch/arm/kernel/vmlinux.lds.S
+    ///TP: Q: can we use start, _edata for bootloader to avoid relocation overhead, if start is zreladdr?
+		.word	start			@ absolute load/run zImage address  ///TP: always 0
+		.word	_edata			@ zImage end address    ///TP: _edata end of data, zImage size except bss, stack, ...
  THUMB(		.thumb			)
 1:
-		mrs	r9, cpsr
+		mrs	r9, cpsr      ///TP: mrs? move to register from status register. status register: cpsr, spsr
+
+///TP: CONFIG_ARM_VIRT_EXT: 
+///	  Enable the kernel to make use of the ARM Virtualization
+///	  Extensions to install hypervisors without run-time firmware
+///	  assistance.
 #ifdef CONFIG_ARM_VIRT_EXT
-		bl	__hyp_stub_install	@ get into SVC mode, reversibly
+		bl	__hyp_stub_install	@ get into SVC mode, reversibly   ///TP: branch with link == call
 #endif
+    ///TP: bootloader delivered arguments
+    ///   r0: #0,   r1: archID,   r2: atags pointer
 		mov	r7, r1			@ save architecture ID
-		mov	r8, r2			@ save atags pointer
+		mov	r8, r2			@ save atags pointer  ///TP: atags have core info, memory info, terminal(uart), ...
 
 #ifndef __ARM_ARCH_2__
 		/*
@@ -148,18 +181,21 @@ start:
 		 * FIQs/IRQs (numeric definitions from angel arm.h source).
 		 * We only do this if we were in user mode on entry.
 		 */
+    ///TP: if in user mode, it is booting from angel. angel is sw debugger
 		mrs	r2, cpsr		@ get current mode
 		tst	r2, #3			@ not user?
 		bne	not_angel
 		mov	r0, #0x17		@ angel_SWIreason_EnterSVC
  ARM(		swi	0x123456	)	@ angel_SWI_ARM
- THUMB(		svc	0xab		)	@ angel_SWI_THUMB
+ THUMB(		svc	0xab		)	@ angel_SWI_THUMB     // using angel swi to get svc mode 
 not_angel:
 		safe_svcmode_maskall r0
 		msr	spsr_cxsf, r9		@ Save the CPU boot mode in
 						@ SPSR
 #else
-		teqp	pc, #0x0c000003		@ turn off interrupts
+		teqp	pc, #0x0c000003		@ turn off interrupts     ///TP: old arm2 does not support 32b addressing. 
+    /// to control interrupt, it uses a part of address field, not cpsr, 
+    ///TP: obsolete feature in the recent arm processors, this code is removed in v3.11
 #endif
 
 		/*
@@ -172,37 +208,46 @@ not_angel:
 		 * by the linker here, but it should preserve r7, r8, and r9.
 		 */
 
+    ///TP: text section
+    /// .text, .data is general
+    /// for specific section, use .section directives 
+    /// when section changes, linker seems to align section 0x20
+    /// empty region is 0 filled
 		.text
 
+    ///TP: exynos does not using auto zreladdr
 #ifdef CONFIG_AUTO_ZRELADDR
 		@ determine final kernel image address
 		mov	r4, pc
 		and	r4, r4, #0xf8000000
 		add	r4, r4, #TEXT_OFFSET
 #else
-		ldr	r4, =zreladdr
+		ldr	r4, =zreladdr ///TP: pseudo assembly, to support complicated constant move, semantically same to "mov r4, #zreladdr 
+    /// TP: assembled to "ldr r4, [pc,offset]" ... ".word zreladdr"
 #endif
 
 		bl	cache_on
 
-restart:	adr	r0, LC0
-		ldmia	r0, {r1, r2, r3, r6, r10, r11, r12}
-		ldr	sp, [r0, #28]
+restart:	adr	r0, LC0			///TP: runtime LC0 address
+		ldmia	r0, {r1, r2, r3, r6, r10, r11, r12}		///TP: thumb2 has 13b reg list, arm support sp, lr, pc, but will be deprecated
+		ldr	sp, [r0, #28]														///TP: load sp seperately
 
 		/*
 		 * We might be running at a different address.  We need
 		 * to fix up various pointers.
 		 */
-		sub	r0, r0, r1		@ calculate the delta offset
-		add	r6, r6, r0		@ _edata
-		add	r10, r10, r0		@ inflated kernel size location
+		sub	r0, r0, r1		@ calculate the delta offset ///TP: r0=runtime LC0, r1=compile time LC0
+		add	r6, r6, r0		@ _edata						///TP: runtime _edata
+		add	r10, r10, r0		@ inflated kernel size location		///TP: input_data_end-4, what 4 means?: align?no!!!, 
+        /// decompressed kernel size, piggy.gzip is not pure compressed file, compression + size;
 
 		/*
 		 * The kernel build system appends the size of the
 		 * decompressed kernel at the end of the compressed data
 		 * in little-endian form.
 		 */
-		ldrb	r9, [r10, #0]
+		///TP: byte read and format to 4B LE 
+		ldrb	r9, [r10, #0]	
 		ldrb	lr, [r10, #1]
 		orr	r9, r9, lr, lsl #8
 		ldrb	lr, [r10, #2]
@@ -210,10 +255,13 @@ restart:	adr	r0, LC0
 		orr	r9, r9, lr, lsl #16
 		orr	r9, r9, r10, lsl #24
 
+    ///TP: ZBOOT_ROM? when ROM has zIMage XIP
+		///TP: for ZBOOT_ROM, TODO:
+		///TP: for non-ZBOOT_ROM, bss, stack, malloc is relocated 
 #ifndef CONFIG_ZBOOT_ROM
 		/* malloc space is above the relocated stack (64k max) */
 		add	sp, sp, r0
-		add	r10, sp, #0x10000
+		add	r10, sp, #0x10000			///TP: stack, 64kB malloc memory
 #else
 		/*
 		 * With ZBOOT_ROM the bss/stack is non relocatable,
@@ -231,11 +279,11 @@ restart:	adr	r0, LC0
  *   r3  = BSS end
  *   r4  = final kernel address
  *   r5  = appended dtb size (still unknown)
- *   r6  = _edata
+ *   r6  = _edata   ///TP: modified
  *   r7  = architecture ID
  *   r8  = atags/device tree pointer
  *   r9  = size of decompressed image
- *   r10 = end of this image, including  bss/stack/malloc space if non XIP
+ *   r10 = end of this image, including  bss/stack/malloc space if non XIP   ///TP: modified
  *   r11 = GOT start
  *   r12 = GOT end
  *   sp  = stack pointer
@@ -244,13 +292,16 @@ restart:	adr	r0, LC0
  * dtb data will get relocated along with the kernel if necessary.
  */
 
+		///TP: stab: symbol table
 		ldr	lr, [r6, #0]
 #ifndef __ARMEB__
 		ldr	r1, =0xedfe0dd0		@ sig is 0xd00dfeed big endian
 #else
-		ldr	r1, =0xd00dfeed
+		ldr	r1, =0xd00dfeed		/// 0xd00dfeed will be magic number for dtb
 #endif
 		cmp	lr, r1
+    ///TP: boot loader locate dtb right after _edata
+    ///TP: after relocation, second running of restart will jump to dtb_check_done
 		bne	dtb_check_done		@ not found
 
 #ifdef CONFIG_ARM_ATAG_DTB_COMPAT
@@ -263,18 +314,23 @@ restart:	adr	r0, LC0
 		 * area.  No GOT fixup has occurred yet, but none of the
 		 * code we're about to call uses any global variable.
 		*/
-		add	sp, sp, #0x10000
+		///TP: store ATAG providing info to DTB
+		add	sp, sp, #0x10000    ///TP: 64kB is malloc space after stack
 		stmfd	sp!, {r0-r3, ip, lr}
 		mov	r0, r8
 		mov	r1, r6
 		sub	r2, sp, r6
-		bl	atags_to_fdt
+		bl	atags_to_fdt		///TP: atags_to_fdt(atags/device tree pointer,_edata, free memory size(bss, stack, part of malloc))
+		///TP: int atags_to_fdt(void *atag_list, void *fdt, int total_space)
+		///     fdt: flattened device tree
 
 		/*
 		 * If returned value is 1, there is no ATAG at the location
 		 * pointed by r8.  Try the typical 0x100 offset from start
 		 * of RAM and hope for the best.
 		 */
+		///TP: if bootloader does not deliever atag address in r2
+		///   try RAM+0x100
 		cmp	r0, #1
 		sub	r0, r4, #TEXT_OFFSET
 		add	r0, r0, #0x100
@@ -282,10 +338,12 @@ restart:	adr	r0, LC0
 		sub	r2, sp, r6
 		bleq	atags_to_fdt
 
+		///TP: restore stack
 		ldmfd	sp!, {r0-r3, ip, lr}
 		sub	sp, sp, #0x10000
 #endif
 
+		///TP: now r8 end of dtb including updated atags info
 		mov	r8, r6			@ use the appended device tree
 
 		/*
@@ -294,6 +352,10 @@ restart:	adr	r0, LC0
 		 * kernel size to compensate if that .bss size is larger
 		 * than the relocated code.
 		 */
+		///TP: if kernel_bss_size>(dtb-wont_overwrite)
+		/// increase kernel size as
+		/// r9: decompressed size
+		/// r6: _edata
 		ldr	r5, =_kernel_bss_size
 		adr	r1, wont_overwrite
 		sub	r1, r6, r1
@@ -304,19 +366,19 @@ restart:	adr	r0, LC0
 		ldr	r5, [r6, #4]
 #ifndef __ARMEB__
 		/* convert r5 (dtb size) to little endian */
-		eor	r1, r5, r5, ror #16
-		bic	r1, r1, #0x00ff0000
-		mov	r5, r5, ror #8
-		eor	r5, r5, r1, lsr #8
+		eor	r1, r5, r5, ror #16    ///TP: ABCD ^ CDAB
+		bic	r1, r1, #0x00ff0000    /// A0CD ^ C0AB
+		mov	r5, r5, ror #8         /// DABC
+		eor	r5, r5, r1, lsr #8     /// DABC ^ (0A0C ^ 0C0A) = DCBA
 #endif
 
-		/* preserve 64-bit alignment */
+		/* preserve 64-bit alignment */		///TP: ceiling
 		add	r5, r5, #7
 		bic	r5, r5, #7
 
 		/* relocate some pointers past the appended dtb */
-		add	r6, r6, r5
-		add	r10, r10, r5
+		add	r6, r6, r5		///TP: now _edata includes dtb
+		add	r10, r10, r5	/// zimage_end += dtbsize
 		add	sp, sp, r5
 dtb_check_done:
 #endif
@@ -327,9 +389,12 @@ dtb_check_done:
  *   r9  = size of decompressed image
  *   r10 = end of this image, including  bss/stack/malloc space if non XIP
  * We basically want:
- *   r4 - 16k page directory >= r10 -> OK
- *   r4 + image length <= address of wont_overwrite -> OK
+ *   r4 - 16k page directory >= r10 -> OK			///TP: start of page >= r10
+ *   r4 + image length <= address of wont_overwrite -> OK		
  */
+///TP: decompressed kernel: r4-16k - r4+r9
+/// current image: wont_overwrite - end of zImage
+
 		add	r10, r10, #16384
 		cmp	r4, r10
 		bhs	wont_overwrite
@@ -350,6 +415,8 @@ dtb_check_done:
 		 * the relocation code added. This avoids overwriting
 		 * ourself when the offset is small.
 		 */
+		///TP: imagine memcpy require src & dst do not overlap
+		/// r10:next 256B block
 		add	r10, r10, #((reloc_code_end - restart + 256) & ~255)
 		bic	r10, r10, #255
 
@@ -374,16 +441,18 @@ dtb_check_done:
 		sub	r9, r6, r5		@ size to copy
 		add	r9, r9, #31		@ rounded up to a multiple
 		bic	r9, r9, #31		@ ... of 32 bytes
-		add	r6, r9, r5
-		add	r9, r9, r10
+		add	r6, r9, r5		///TP: end address of src
+		add	r9, r9, r10		///TP: end address of dst
 
+		///TP: copy from the src end address until src start address
+		/// decrement before, 8 * 4B copy
 1:		ldmdb	r6!, {r0 - r3, r10 - r12, lr}
 		cmp	r6, r5
 		stmdb	r9!, {r0 - r3, r10 - r12, lr}
 		bhi	1b
 
 		/* Preserve offset to relocated code. */
-		sub	r6, r9, r6
+		sub	r6, r9, r6			///TP: r9 is start of destination kernel,   r6: start of currently running kernel
 
 #ifndef CONFIG_ZBOOT_ROM
 		/* cache_clean_flush may use the stack, so relocate it */
@@ -392,7 +461,12 @@ dtb_check_done:
 
 		bl	cache_clean_flush
 
-		adr	r0, BSYM(restart)
+		///TP: r6 is offset between src kernel and dst kernel
+		adr	r0, BSYM(restart)			/// why restart??? not wont_overwrite?
+		/// restart를 이용하여 r0 delta 다시계산, 
+		/// 현재 판단으로는 나머지는 불필요해보임, 그냥 여기서 r0계산하고 바로 wont_overwrite로 점프해도 될듯.
+		/// 현재 restart부터 하면 dtb_check_done, wont_overwrite로 바로 jump
+		/// overhead는 수십cycle정도일것으로 판단됨.
 		add	r0, r0, r6
 		mov	pc, r0
 
@@ -429,6 +503,7 @@ wont_overwrite:
 		 * Relocate all entries in the GOT table.
 		 * Bump bss entries to _edata + dtb size
 		 */
+		///TP: got나 plt 가 왜? 필요하지? this is not dynamic library!!! 
 1:		ldr	r1, [r11, #0]		@ relocate entries in the GOT
 		add	r1, r1, r0		@ This fixes up C references
 		cmp	r1, r2			@ if entry >= bss_start &&
@@ -474,7 +549,7 @@ not_relocated:	mov	r0, #0
  */
 		mov	r0, r4
 		mov	r1, sp			@ malloc space above stack
-		add	r2, sp, #0x10000	@ 64k max
+		add	r2, sp, #0x10000	@ 64k max		///TP: scratch memory
 		mov	r3, r7
 		bl	decompress_kernel
 		bl	cache_clean_flush
@@ -509,8 +584,10 @@ LC0:		.word	LC0			@ r1
 		.word	__bss_start		@ r2
 		.word	_end			@ r3
 		.word	_edata			@ r6
-		.word	input_data_end - 4	@ r10 (inflated size location)
-		.word	_got_start		@ r11
+		.word	input_data_end - 4	@ r10 (inflated size location)		///TP: what is inflated size???
+        /// seperate piggy section can do default align???NO!
+        /// piggy = compressed image + length(4B) by kbs(kernel build system); length is inflated.
+		.word	_got_start		@ r11   ///TP: kernel image should not use dynamic link lib. what is purpose of got?  TODO:
 		.word	_got_end		@ ip
 		.word	.L_user_stack_end	@ sp
 		.size	LC0, . - LC0
@@ -1066,45 +1143,62 @@ __armv6_mmu_cache_flush:
 
 __armv7_mmu_cache_flush:
 		mrc	p15, 0, r10, c0, c1, 5	@ read ID_MMFR1
-		tst	r10, #0xf << 16		@ hierarchical cache (ARMv7)
+		tst	r10, #0xf << 16		@ hierarchical cache (ARMv7)	///TP: L1 Harvard cache: CA-15: 0
 		mov	r10, #0
-		beq	hierarchical
+		beq	hierarchical		///TP: hierarchical means multi-level cache
 		mcr	p15, 0, r10, c7, c14, 0	@ clean+invalidate D
 		b	iflush
 hierarchical:
 		mcr	p15, 0, r10, c7, c10, 5	@ DMB
 		stmfd	sp!, {r0-r7, r9-r11}
-		mrc	p15, 1, r0, c0, c0, 1	@ read clidr
+		mrc	p15, 1, r0, c0, c0, 1	@ read clidr		///TP: cache level ID register
 		ands	r3, r0, #0x7000000	@ extract loc from clidr
 		mov	r3, r3, lsr #23		@ left align loc bit field
 		beq	finished		@ if loc is 0, then no need to clean
 		mov	r10, #0			@ start clean at cache level 0
+		///TP: loc[26:24]: 0: l1 cache, 2: l3 cache (CA-15)
+		/// now r3: 4[26:23]
+		/// for cache_level
+		///		for cache_index
+		///			for cache_way 
 loop1:
-		add	r2, r10, r10, lsr #1	@ work out 3x current cache level
+		add	r2, r10, r10, lsr #1	@ work out 3x current cache level			///TP: 3: CType(Cachetype: Unified/Seperate) field is 3bit
 		mov	r1, r0, lsr r2		@ extract cache type bits from clidr
-		and	r1, r1, #7		@ mask of the bits for current cache only
-		cmp	r1, #2			@ see what cache we have at this level
+		and	r1, r1, #7		@ mask of the bits for current cache only			///TP: 3bit
+		cmp	r1, #2			@ see what cache we have at this level					
+		///TP: ARM B4.1.20, 0: no cache, 1: icache, 2: dcache, 3: seperate cache, 4: unified
 		blt	skip			@ skip if no cache, or just i-cache
 		mcr	p15, 2, r10, c0, c0, 0	@ select current cache level in cssr
+		///TP: cache size selection register level[3:1], InD[0]:0(data or unified cache)
 		mcr	p15, 0, r10, c7, c5, 4	@ isb to sych the new cssr&csidr
 		mrc	p15, 1, r1, c0, c0, 0	@ read the new csidr
+		///TP: line size [2:0]
 		and	r2, r1, #7		@ extract the length of the cache lines
 		add	r2, r2, #4		@ add 4 (line length offset)
+		///TP: line size log2(word#)-2: 16 words=>2
 		ldr	r4, =0x3ff
 		ands	r4, r4, r1, lsr #3	@ find maximum number on the way size
+		///TP: get associativity [12:3]: 1(2way) or 0xf(16way)
 		clz	r5, r4			@ find bit position of way size increment
 		ldr	r7, =0x7fff
 		ands	r7, r7, r1, lsr #13	@ extract max number of the index size
+		///TP: get NumSets [27-13]: L1I[64kB]:2way*512Sets*64Bline L1D[32kB]:2way*256Sets*64Bline
 loop2:
 		mov	r9, r4			@ create working copy of max way size
+		///TP: r2: line size: 4+log2(word#)-2
+		/// r4,r9: way size-1
+		/// r7: numsets-1
+		/// r10: level*2
 loop3:
  ARM(		orr	r11, r10, r9, lsl r5	) @ factor way and cache number into r11
  ARM(		orr	r11, r11, r7, lsl r2	) @ factor index number into r11
+		///TP: r11: way(<< clz) | cache index | level
  THUMB(		lsl	r6, r9, r5		)
  THUMB(		orr	r11, r10, r6		) @ factor way and cache number into r11
  THUMB(		lsl	r6, r7, r2		)
  THUMB(		orr	r11, r11, r6		) @ factor index number into r11
 		mcr	p15, 0, r11, c7, c14, 2	@ clean & invalidate by set/way
+				///TP: B4.2.1 page 1742
 		subs	r9, r9, #1		@ decrement the way
 		bge	loop3
 		subs	r7, r7, #1		@ decrement the index
@@ -1119,7 +1213,9 @@ finished:
 		mcr	p15, 2, r10, c0, c0, 0	@ select current cache level in cssr
 iflush:
 		mcr	p15, 0, r10, c7, c10, 4	@ DSB
-		mcr	p15, 0, r10, c7, c5, 0	@ invalidate I+BTB
+		mcr	p15, 0, r10, c7, c5, 0	@ invalidate Icache+BTB(branch target buffer)
+		/// why not doing branch predictor invalidate? just because miss is okay
+       /// NO!!! Invalidate I$+Branch Predictor is correct
 		mcr	p15, 0, r10, c7, c10, 4	@ DSB
 		mcr	p15, 0, r10, c7, c5, 4	@ ISB
 		mov	pc, lr
