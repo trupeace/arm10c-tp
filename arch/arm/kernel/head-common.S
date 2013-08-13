@@ -154,6 +154,8 @@ __lookup_processor_type:
 	add	r5, r5, r3			@ convert virt addresses to
 	add	r6, r6, r3			@ physical address space
 1:	ldmia	r5, {r3, r4}			@ value, mask
+  ///TP:  r3: PROC ID: for ca15 0x410fc0f0
+	///     r4: PROC ID: for ca15 0xff0ffff0
 	and	r4, r4, r9			@ mask wanted bits
 	teq	r3, r4
 	beq	2f
@@ -170,6 +172,7 @@ ENDPROC(__lookup_processor_type)
 	.align	2
 	.type	__lookup_processor_type_data, %object
 __lookup_processor_type_data:
+///TP: arch/arm/mm/proc-v7.S
 	.long	.
 	.long	__proc_info_begin
 	.long	__proc_info_end

@@ -34,8 +34,11 @@
  * the least significant 16 bits to be 0x8000, but we could probably
  * relax this restriction to KERNEL_RAM_VADDR >= PAGE_OFFSET + 0x4000.
  */
+///TP:  PAGE_OFFSET: 0xc0000000 (VMSPLIT_3G option)
+///     TEXT_OFFSET: 0x8000
 #define KERNEL_RAM_VADDR	(PAGE_OFFSET + TEXT_OFFSET)
 #if (KERNEL_RAM_VADDR & 0xffff) != 0x8000
+///TP:  #error for prepocessing error???
 #error KERNEL_RAM_VADDR must start at 0xXXXX8000
 #endif
 
@@ -48,6 +51,8 @@
 #define PMD_ORDER	2
 #endif
 
+///TP: why named swapper_pg_dir?
+///   It seems that using this for 
 	.globl	swapper_pg_dir
 	.equ	swapper_pg_dir, KERNEL_RAM_VADDR - PG_DIR_SIZE
 
@@ -94,6 +99,7 @@ ENTRY(stext)
 	movs	r10, r5				@ invalid processor (r5=0)?
  THUMB( it	eq )		@ force fixup-able long branch encoding
 	beq	__error_p			@ yes, error 'p'
+  /// print error and while loop
 
 #ifdef CONFIG_ARM_LPAE
 	mrc	p15, 0, r3, c0, c1, 4		@ read ID_MMFR0
@@ -107,7 +113,7 @@ ENTRY(stext)
 	adr	r3, 2f
 	ldmia	r3, {r4, r8}
 	sub	r4, r3, r4			@ (PHYS_OFFSET - PAGE_OFFSET)
-	add	r8, r8, r4			@ PHYS_OFFSET
+	add	r8, r8, r4			@ PHYS_OFFSET   ///TP: PAGE_OFFSET + (run time - compile time addr)
 #else
 	ldr	r8, =PHYS_OFFSET		@ always constant in this case
 #endif
@@ -116,11 +122,16 @@ ENTRY(stext)
 	 * r1 = machine no, r2 = atags or dtb,
 	 * r8 = phys_offset, r9 = cpuid, r10 = procinfo
 	 */
+  ///TP: vet: 검사,진료
 	bl	__vet_atags
 #ifdef CONFIG_SMP_ON_UP
+  ///TP: if SMP is running on UP(single core), fix .alt.smp.init
 	bl	__fixup_smp
 #endif
 #ifdef CONFIG_ARM_PATCH_PHYS_VIRT
+  ///TP: pv_table is table for virtual <-> physical translation
+  /// when XIP, no need for this, virt<->phy by #define
+  /// here we adjust pv_table entry with offset diff
 	bl	__fixup_pv_table
 #endif
 	bl	__create_page_tables
@@ -159,7 +170,7 @@ ENDPROC(stext)
  *  r4 = physical page table address
  */
 __create_page_tables:
-	pgtbl	r4, r8				@ page table address
+	pgtbl	r4, r8				@ page table address    ///TP: r4 = r8 + (#TEXT_OFFSET(0x8000) - PG_DIR_SIZE(0x4000)
 
 	/*
 	 * Clear the swapper page table
@@ -202,12 +213,19 @@ __create_page_tables:
 #endif
 #endif
 
+  ///TP:ref: mm/proc-v7.S proc_info
+  /// r7 = proc_info_list.__cpu_mm_mmu_flags = (PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_SECT_AP_READ | PMD_SECT_AF | PMD_FLAGS_SMP | \mm_mmuflags)
+  /// PMD_TYPE_SECT: common macro for c and asm (which automatically extend (or typecasting) to 64b in  LPAE case
+  /// AF is Access flag: refer to longterm descriptor
 	ldr	r7, [r10, #PROCINFO_MM_MMUFLAGS] @ mm_mmuflags
+
 
 	/*
 	 * Create identity mapping to cater for __enable_mmu.
 	 * This identity mapping will be removed by paging_init().
 	 */
+  ///TP: codes around __turn_mmu_on_loc should have phy addr = virt addr
+  /// when turn on mmu, PC is still same to phy addr, so  phy = virt
 	adr	r0, __turn_mmu_on_loc
 	ldmia	r0, {r3, r5, r6}
 	sub	r0, r0, r3			@ virt->phys offset
@@ -216,6 +234,8 @@ __create_page_tables:
 	mov	r5, r5, lsr #SECTION_SHIFT
 	mov	r6, r6, lsr #SECTION_SHIFT
 
+  ///TP:  r7 is attribute(section, ap:rw,...)
+  ///     r4: page table base
 1:	orr	r3, r7, r5, lsl #SECTION_SHIFT	@ flags + kernel base
 	str	r3, [r4, r5, lsl #PMD_ORDER]	@ identity mapping
 	cmp	r5, r6
@@ -225,10 +245,13 @@ __create_page_tables:
 	/*
 	 * Map our RAM from the start to the end of the kernel .bss section.
 	 */
-	add	r0, r4, #PAGE_OFFSET >> (SECTION_SHIFT - PMD_ORDER)
-	ldr	r6, =(_end - 1)
-	orr	r3, r8, r7
-	add	r6, r4, r6, lsr #(SECTION_SHIFT - PMD_ORDER)
+  ///TP: at last phy-virt mapping is different
+  ///     r4: page table base
+  ///TP: Q why not use i & d cache?
+	add	r0, r4, #PAGE_OFFSET >> (SECTION_SHIFT - PMD_ORDER) ///TP: r0: page table entry addr to virt addr 0xc0000000(PAGE_OFFSET)
+	ldr	r6, =(_end - 1) ///TP: end Image
+	orr	r3, r8, r7      ///r8: PHY_OFFSET
+	add	r6, r4, r6, lsr #(SECTION_SHIFT - PMD_ORDER)  ///TP now r6 is pte of the end of Image 
 1:	str	r3, [r0], #1 << PMD_ORDER
 	add	r3, r3, #1 << SECTION_SHIFT
 	cmp	r0, r6
@@ -474,10 +497,13 @@ ENDPROC(__turn_mmu_on)
 #ifdef CONFIG_SMP_ON_UP
 	__INIT
 __fixup_smp:
+///TP: when SMP os is running on UP(single core),
+///   fixup .alt.smp.init
 	and	r3, r9, #0x000f0000	@ architecture version
 	teq	r3, #0x000f0000		@ CPU ID supported?
 	bne	__fixup_smp_on_up	@ no, assume UP
 
+  ///TP: if this is ARM11 MPCore, return 
 	bic	r3, r9, #0x00ff0000
 	bic	r3, r3, #0x0000000f	@ mask 0xff00fff0
 	mov	r4, #0x41000000
@@ -486,6 +512,10 @@ __fixup_smp:
 	teq	r3, r4			@ ARM 11MPCore?
 	moveq	pc, lr			@ yes, assume SMP
 
+  ///TP: MPIDR[31:30]   ref: AARM B4.1.106
+  ///  2'b00 no multi processing extension
+  ///  2'b10 means multi core
+  ///  2'b11 UP with multiprocessing extension
 	mrc	p15, 0, r0, c0, c0, 5	@ read MPIDR
 	and	r0, r0, #0xc0000000	@ multiprocessing extensions and
 	teq	r0, #0x80000000		@ not part of a uniprocessor system?
@@ -508,6 +538,7 @@ ENDPROC(__fixup_smp)
 	.pushsection .data
 	.globl	smp_on_up
 smp_on_up:
+///TP: either ALT_SMP or ALT_UP
 	ALT_SMP(.long	1)
 	ALT_UP(.long	0)
 	.popsection
@@ -549,7 +580,7 @@ ENDPROC(fixup_smp)
 __fixup_pv_table:
 	adr	r0, 1f
 	ldmia	r0, {r3-r5, r7}
-	sub	r3, r0, r3	@ PHYS_OFFSET - PAGE_OFFSET
+	sub	r3, r0, r3	@ PHYS_OFFSET - PAGE_OFFSET ///TP: runtime addr(1f) - compiletime addr(1f), 0x40008000-0xc0008000 = 0x8000_0000
 	add	r4, r4, r3	@ adjust table start address
 	add	r5, r5, r3	@ adjust table end address
 	add	r7, r7, r3	@ adjust __pv_phys_offset address
@@ -593,6 +624,9 @@ __fixup_a_pv_table:
 	bx	lr
 #else
 	b	2f
+///TP:	r4: adjusted table start address
+///     r5: adjusted table end address
+///     r7: adjusted __pv_phys_offset address
 1:	ldr	ip, [r7, r3]
 	bic	ip, ip, #0x000000ff
 	orr	ip, ip, r6	@ mask in offset bits 31-24

@@ -188,7 +188,7 @@
 	.long	9998b						;\
 	W(b)	. + up_b_offset					;\
 	.popsection
-#else
+#else   ///TP: !CONFIG_SMP
 #define ALT_SMP(instr...)
 #define ALT_UP(instr...) instr
 #define ALT_UP_B(label) b label
@@ -247,6 +247,7 @@
  * This macro is intended for forcing the CPU into SVC mode at boot time.
  * you cannot return to the original mode.
  */
+///TP:
 .macro safe_svcmode_maskall reg:req
 #if __LINUX_ARM_ARCH__ >= 6
 	mrs	\reg , cpsr
