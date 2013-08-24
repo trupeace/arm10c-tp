@@ -143,11 +143,13 @@ ENTRY(stext)
 	 * above.  On return, the CPU will be ready for the MMU to be
 	 * turned on, and r0 will hold the CPU control register value.
 	 */
+  ///TP: arch/arm/mm/proc-v7.S
 	ldr	r13, =__mmap_switched		@ address to jump to after
 						@ mmu has been enabled
 	adr	lr, BSYM(1f)			@ return (PIC) address
-	mov	r8, r4				@ set TTBR1 to swapper_pg_dir
- ARM(	add	pc, r10, #PROCINFO_INITFUNC	)
+	mov	r8, r4				@ set TTBR1 to swapper_pg_dir ///TP: r4=0x40004000
+ ARM(	add	pc, r10, #PROCINFO_INITFUNC	)   ///TP: PROCINFO_INITFUNC(5), r10[5] = __v7_ca15mp_setup	
+ ///TP: DEFINE(PROCINFO_INITFUNC,	offsetof(struct proc_info_list, __cpu_flush));
  THUMB(	add	r12, r10, #PROCINFO_INITFUNC	)
  THUMB(	mov	pc, r12				)
 1:	b	__enable_mmu
@@ -280,8 +282,14 @@ __create_page_tables:
 	 * Then map boot params address in r2 if specified.
 	 * We map 2 sections in case the ATAGs/DTB crosses a section boundary.
 	 */
+  ///TP:comment
+  ///r2: ATAGS/DTB address
+  ///r4: 0x40004000, page table base r8 + (#TEXT_OFFSET(0x8000) - PG_DIR_SIZE(0x4000))
+  ///r7: section entry property
+  ///r8: PHY_OFFSET
+  /// 
 	mov	r0, r2, lsr #SECTION_SHIFT
-	movs	r0, r0, lsl #SECTION_SHIFT
+	movs	r0, r0, lsl #SECTION_SHIFT    /// r0: 1MB aligned r2 address
 	subne	r3, r0, r8
 	addne	r3, r3, #PAGE_OFFSET
 	addne	r3, r4, r3, lsr #(SECTION_SHIFT - PMD_ORDER)
@@ -433,7 +441,7 @@ __secondary_data:
  *  r2  = atags or dtb pointer
  *  r4  = page table pointer
  *  r9  = processor ID
- *  r13 = *virtual* address to jump to upon completion
+ *  r13 = *virtual* address to jump to upon completion    ///TP: LDR r13, =__mmap_switched
  */
 __enable_mmu:
 #if defined(CONFIG_ALIGNMENT_TRAP) && __LINUX_ARM_ARCH__ < 6
@@ -454,12 +462,13 @@ __enable_mmu:
 	mov	r5, #0
 	mcrr	p15, 0, r4, r5, c2		@ load TTBR0
 #else
+  ///TP: arch/arm/include/asm/domain.h 
 	mov	r5, #(domain_val(DOMAIN_USER, DOMAIN_MANAGER) | \
 		      domain_val(DOMAIN_KERNEL, DOMAIN_MANAGER) | \
 		      domain_val(DOMAIN_TABLE, DOMAIN_MANAGER) | \
 		      domain_val(DOMAIN_IO, DOMAIN_CLIENT))
 	mcr	p15, 0, r5, c3, c0, 0		@ load domain access register
-	mcr	p15, 0, r4, c2, c0, 0		@ load page table pointer
+	mcr	p15, 0, r4, c2, c0, 0		@ load page table pointer   ///TP: TTBR0
 #endif
 	b	__turn_mmu_on
 ENDPROC(__enable_mmu)
@@ -474,17 +483,17 @@ ENDPROC(__enable_mmu)
  *  r1  = machine ID
  *  r2  = atags or dtb pointer
  *  r9  = processor ID
- *  r13 = *virtual* address to jump to upon completion
+ *  r13 = *virtual* address to jump to upon completion    ///TP: __mmap_switched
  *
  * other registers depend on the function called upon completion
  */
 	.align	5
 	.pushsection	.idmap.text, "ax"
 ENTRY(__turn_mmu_on)
-	mov	r0, r0
+	mov	r0, r0    // this false dependancy block is for OoO architecture, not ARMv7. e.g. xsale
 	instr_sync
 	mcr	p15, 0, r0, c1, c0, 0		@ write control reg
-	mrc	p15, 0, r3, c0, c0, 0		@ read id reg
+	mrc	p15, 0, r3, c0, c0, 0		@ read id reg ///TP: make dependency for manual instruction ordering, it is not needed in ARMv7
 	instr_sync
 	mov	r3, r3
 	mov	r3, r13
