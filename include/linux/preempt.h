@@ -20,7 +20,7 @@
 
 #define inc_preempt_count() add_preempt_count(1)
 #define dec_preempt_count() sub_preempt_count(1)
-
+///TP: INIT_PREEMPT_COUNT:0x4000_0001
 #define preempt_count()	(current_thread_info()->preempt_count)
 
 #ifdef CONFIG_PREEMPT
