@@ -8,8 +8,9 @@
 #define L1_CACHE_ALIGN(x) ALIGN(x, L1_CACHE_BYTES)
 #endif
 
+///TP: A9: 32B cache line, A15: 64B cache line
 #ifndef SMP_CACHE_BYTES
-#define SMP_CACHE_BYTES L1_CACHE_BYTES
+#define SMP_CACHE_BYTES L1_CACHE_BYTES    ///TP: 2^6=64B
 #endif
 
 #ifndef __read_mostly
@@ -22,7 +23,7 @@
 
 #ifndef ____cacheline_aligned_in_smp
 #ifdef CONFIG_SMP
-#define ____cacheline_aligned_in_smp ____cacheline_aligned
+#define ____cacheline_aligned_in_smp ____cacheline_aligned    ///TP: 64B aligned attribute
 #else
 #define ____cacheline_aligned_in_smp
 #endif /* CONFIG_SMP */

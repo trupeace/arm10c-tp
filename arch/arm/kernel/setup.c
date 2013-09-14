@@ -121,6 +121,7 @@ EXPORT_SYMBOL(outer_cache);
  * C code should use the cpu_architecture() function instead of accessing this
  * variable directly.
  */
+/// __read_mostly: seperate section which is assumed to be used frequently, for cache hit rate
 int __cpu_architecture __read_mostly = CPU_ARCH_UNKNOWN;
 
 struct stack {
@@ -141,6 +142,7 @@ static const char *machine_name;
 static char __initdata cmd_line[COMMAND_LINE_SIZE];
 const struct machine_desc *machine_desc __initdata;
 
+///TP: depending on endian, lsb returns 'l' or 'b'
 static union { char c[4]; unsigned long l; } endian_test __initdata = { { 'l', '?', '?', 'b' } };
 #define ENDIANNESS ((char)endian_test.l)
 
@@ -307,7 +309,7 @@ static void __init cacheid_init(void)
 		cacheid = 0;
 	} else if (arch >= CPU_ARCH_ARMv6) {
 		unsigned int cachetype = read_cpuid_cachetype();
-		if ((cachetype & (7 << 29)) == 4 << 29) {
+		if ((cachetype & (7 << 29)) == 4 << 29) { ///TP: if fmt is v7 fmt
 			/* ARMv7 register format */
 			arch = CPU_ARCH_ARMv7;
 			cacheid = CACHEID_VIPT_NONALIASING;
@@ -316,7 +318,7 @@ static void __init cacheid_init(void)
 				cacheid |= CACHEID_ASID_TAGGED;
 				break;
 			case (3 << 14):
-				cacheid |= CACHEID_PIPT;
+				cacheid |= CACHEID_PIPT;    ///TP: CA15
 				break;
 			}
 		} else {
@@ -372,6 +374,7 @@ static void __init cpuid_init_hwcaps(void)
 	if (cpu_architecture() < CPU_ARCH_ARMv7)
 		return;
 
+  ///TP: check Integer DIVISOR support
 	divide_instrs = (read_cpuid_ext(CPUID_EXT_ISAR0) & 0x0f000000) >> 24;
 
 	switch (divide_instrs) {
@@ -567,8 +570,8 @@ static void __init setup_processor(void)
 		while (1);
 	}
 
-	cpu_name = list->cpu_name;
-	__cpu_architecture = __get_cpu_architecture();
+	cpu_name = list->cpu_name;    ///TP: "ARMv7 Processor"
+	__cpu_architecture = __get_cpu_architecture(); ///TP: Main ID 0x410fc0f0
 
 #ifdef MULTI_CPU
 	processor = *list->proc;
@@ -585,13 +588,14 @@ static void __init setup_processor(void)
 
 	printk("CPU: %s [%08x] revision %d (ARMv%s), cr=%08lx\n",
 	       cpu_name, read_cpuid_id(), read_cpuid_id() & 15,
-	       proc_arch[cpu_architecture()], cr_alignment);
+	       proc_arch[cpu_architecture()], cr_alignment);///TP: cr_aligment: 0x10c53c7f SCTLR setting value, set in arch/arm/kernel/head-common.S
 
+  ///TP: seems to relate 'uname' command
 	snprintf(init_utsname()->machine, __NEW_UTS_LEN + 1, "%s%c",
-		 list->arch_name, ENDIANNESS);
+		 list->arch_name, ENDIANNESS);  ///TP: "armv7[lb]"
 	snprintf(elf_platform, ELF_PLATFORM_SIZE, "%s%c",
-		 list->elf_name, ENDIANNESS);
-	elf_hwcap = list->elf_hwcap;
+		 list->elf_name, ENDIANNESS);   ///TP: "V7"
+	elf_hwcap = list->elf_hwcap;      ///TP: .long	HWCAP_SWP | HWCAP_HALF | HWCAP_THUMB | HWCAP_FAST_MULT | HWCAP_EDSP | HWCAP_TLS | \hwcaps
 
 	cpuid_init_hwcaps();
 
@@ -599,7 +603,7 @@ static void __init setup_processor(void)
 	elf_hwcap &= ~(HWCAP_THUMB | HWCAP_IDIVT);
 #endif
 
-	feat_v6_fixup();
+	feat_v6_fixup(); ///TP: Main ID 0x410fc0f0
 
 	cacheid_init();
 	cpu_init();
