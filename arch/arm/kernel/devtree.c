@@ -181,7 +181,7 @@ bool arch_match_cpu_phys_id(int cpu, u64 phys_id)
  * If a dtb was passed to the kernel in r2, then use it to choose the
  * correct machine_desc and to setup the system.
  */
-const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)
+const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)  ///TP: dt_phys=__atags_pointer
 {
 	struct boot_param_header *devtree;
 	const struct machine_desc *mdesc, *mdesc_best = NULL;
@@ -202,20 +202,26 @@ const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)
 	devtree = phys_to_virt(dt_phys);
 
 	/* check device tree validity */
-	if (be32_to_cpu(devtree->magic) != OF_DT_HEADER)
+  ///TP: dtb has magic number d00dfeed in big endian format
+	if (be32_to_cpu(devtree->magic) != OF_DT_HEADER)    ///TP: if little-endian, swap byte, if hw supports,  use 'rev' instruction 
 		return NULL;
 
 	/* Search the mdescs for the 'best' compatible value match */
 	initial_boot_params = devtree;
 	dt_root = of_get_flat_dt_root();
+  ///TP: dts for target, dtsi for include
+	// for (mdesc = __arch_info_begin; mdesc < __arch_info_end; mdesc++)   section: .arch.info.init
+  // 3 loop: mdesc[], mdesc->dt_compat[], dtb compatible string list, 
+  // find the most front located matching mdesc
 	for_each_machine_desc(mdesc) {
 		score = of_flat_dt_match(dt_root, mdesc->dt_compat);
 		if (score > 0 && score < mdesc_score) {
 			mdesc_best = mdesc;
-			mdesc_score = score;
+			mdesc_score = score;    //score is index in dtb, for score, the lower, the better
 		}
 	}
 	if (!mdesc_best) {
+    ///TP: if can't find matched dtb, arch_info_list(machine_desc[])
 		const char *prop;
 		long size;
 
@@ -241,14 +247,14 @@ const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)
 	pr_info("Machine: %s, model: %s\n", mdesc_best->name, model);
 
 	/* Retrieve various information from the /chosen node */
-	of_scan_flat_dt(early_init_dt_scan_chosen, boot_command_line);
+	of_scan_flat_dt(early_init_dt_scan_chosen, boot_command_line); ///TP: chosen node is located @ exynos5420-smdk5420.dts, set boot_command_line as bootargs if it is empty
 	/* Initialize {size,address}-cells info */
-	of_scan_flat_dt(early_init_dt_scan_root, NULL);
+	of_scan_flat_dt(early_init_dt_scan_root, NULL);   ///TP: set size, address cells info of root node, default: skeleton.dtsi
 	/* Setup memory, calling early_init_dt_add_memory_arch */
 	of_scan_flat_dt(early_init_dt_scan_memory, NULL);
 
 	/* Change machine number to match the mdesc we're using */
-	__machine_arch_type = mdesc_best->nr;
+	__machine_arch_type = mdesc_best->nr;   ///for DT case, 0xffffffff, otherwise, MACH_TYPE_type, nr=architecture number
 
-	return mdesc_best;
+	return mdesc_best;      ///TP:machine_desc * in .arch.info.init
 }

@@ -176,6 +176,8 @@
 extern unsigned long __pv_phys_offset;
 #define PHYS_OFFSET __pv_phys_offset
 
+///TP: imm8(except rotate4) is fixed at __fixup_pv_table(kernel/head.S) and fixup_pv_table(module loading) 
+// .pv_table section is address list to get the address of instructions which need to be fixed
 #define __pv_stub(from,to,instr,type)			\
 	__asm__("@ __pv_stub\n"				\
 	"1:	" instr "	%0, %1, %2\n"		\

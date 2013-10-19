@@ -111,6 +111,8 @@ static inline __attribute_const__ __u32 __fswahb32(__u32 val)
  * __swab32 - return a byteswapped 32-bit value
  * @x: value to byteswap
  */
+
+///TP: __builtin_constant_p returns 1 if x is constant, otherwise 0
 #define __swab32(x)				\
 	(__builtin_constant_p((__u32)(x)) ?	\
 	___constant_swab32(x) :			\

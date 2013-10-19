@@ -627,7 +627,7 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 {
 	struct membank *bank = &meminfo.bank[meminfo.nr_banks];
 
-	if (meminfo.nr_banks >= NR_BANKS) {
+	if (meminfo.nr_banks >= NR_BANKS) {   ///TP:for ARM NR_BANKS = 8
 		printk(KERN_CRIT "NR_BANKS too low, "
 			"ignoring memory at 0x%08llx\n", (long long)start);
 		return -EINVAL;
@@ -637,7 +637,7 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 	 * Ensure that start/size are aligned to a page boundary.
 	 * Size is appropriately rounded down, start is rounded up.
 	 */
-	size -= start & ~PAGE_MASK;
+	size -= start & ~PAGE_MASK;   ///TP: mask page=4kB
 	bank->start = PAGE_ALIGN(start);
 
 #ifndef CONFIG_ARM_LPAE
@@ -859,7 +859,7 @@ void __init setup_arch(char **cmdline_p)
 	const struct machine_desc *mdesc;
 
 	setup_processor();
-	mdesc = setup_machine_fdt(__atags_pointer);
+	mdesc = setup_machine_fdt(__atags_pointer);   ///TP: setup model, bootargs, memory
 	if (!mdesc)
 		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);
 	machine_desc = mdesc;

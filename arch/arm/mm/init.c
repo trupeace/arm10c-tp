@@ -37,7 +37,7 @@
 
 #include "mm.h"
 
-static phys_addr_t phys_initrd_start __initdata = 0;
+static phys_addr_t phys_initrd_start __initdata = 0;    /// set by start_kernel().setup_arch().early_init_dt_check_for_initrd()
 static unsigned long phys_initrd_size __initdata = 0;
 
 static int __init early_initrd(char *p)

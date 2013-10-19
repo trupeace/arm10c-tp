@@ -96,7 +96,7 @@ int of_fdt_is_compatible(struct boot_param_header *blob,
 		return 0;
 	while (cplen > 0) {
 		score++;
-		if (of_compat_cmp(cp, compat, strlen(compat)) == 0)
+		if (of_compat_cmp(cp, compat, strlen(compat)) == 0)   //strcmp ignoring case
 			return score;
 		l = strlen(cp) + 1;
 		cp += l;
@@ -117,6 +117,7 @@ int of_fdt_match(struct boot_param_header *blob, unsigned long node,
 	if (!compat)
 		return 0;
 
+  ///TP: for exynos5-dt, "samsung,exynos5250", "samsung,exynos5420", "samsung,exynos5440", NULL
 	while (*compat) {
 		tmp = of_fdt_is_compatible(blob, node, *compat);
 		if (tmp && (score == 0 || (tmp < score)))
@@ -433,7 +434,7 @@ void of_fdt_unflatten_tree(unsigned long *blob,
 EXPORT_SYMBOL_GPL(of_fdt_unflatten_tree);
 
 /* Everything below here references initial_boot_params directly. */
-int __initdata dt_root_addr_cells;
+int __initdata dt_root_addr_cells;    ///TP: updated by early_init_dt_scan_root()
 int __initdata dt_root_size_cells;
 
 struct boot_param_header *initial_boot_params;
@@ -470,9 +471,9 @@ int __init of_scan_flat_dt(int (*it)(unsigned long node,
 		}
 		if (tag == OF_DT_NOP)
 			continue;
-		if (tag == OF_DT_END)
+		if (tag == OF_DT_END)     ///TP: early_init_dt_scan_memory() ends at this
 			break;
-		if (tag == OF_DT_PROP) {
+		if (tag == OF_DT_PROP) {    ///TP: this logic makes 0x00000001 in 0x40, 0x50, 0x60 of dtb not work as FDT_BEGIN_NODE, which results in the depth of chosen, model to 1
 			u32 sz = be32_to_cpup((__be32 *)p);
 			p += 8;
 			if (be32_to_cpu(initial_boot_params->version) < 0x10)
@@ -488,9 +489,9 @@ int __init of_scan_flat_dt(int (*it)(unsigned long node,
 		depth++;
 		pathp = (char *)p;
 		p = ALIGN(p + strlen(pathp) + 1, 4);
-		if (*pathp == '/')
+		if (*pathp == '/')    ///TP: if path starts with '/', it is absolute path, then extract only last name
 			pathp = kbasename(pathp);
-		rc = it(p, pathp, depth, data);
+		rc = it(p, pathp, depth, data); ///TP: early_init_dt_scan_chosen(.data=boot_command_line), early_init_dt_scan_root(NULL), early_init_dt_scan_memory(NULL)
 		if (rc != 0)
 			break;
 	} while (1);
@@ -508,7 +509,7 @@ unsigned long __init of_get_flat_dt_root(void)
 
 	while (be32_to_cpup((__be32 *)p) == OF_DT_NOP)
 		p += 4;
-	BUG_ON(be32_to_cpup((__be32 *)p) != OF_DT_BEGIN_NODE);
+	BUG_ON(be32_to_cpup((__be32 *)p) != OF_DT_BEGIN_NODE);  //assertion, if not unreachable()
 	p += 4;
 	return ALIGN(p + strlen((char *)p) + 1, 4);
 }
@@ -632,7 +633,10 @@ void __init early_init_dt_check_for_initrd(unsigned long node)
 
 	pr_debug("Looking for initrd properties... ");
 
-	prop = of_get_flat_dt_prop(node, "linux,initrd-start", &len);
+  ///TP: initrd can be attached by atags_to_fdt, this is optional
+  //    refer to arch/arm/boot/compressed/atags_to_fdt.c
+  //    what is in initrd?
+	prop = of_get_flat_dt_prop(node, "linux,initrd-start", &len);   ///TP: this is not in exynos dtb, atags_to_fdt modify dtb to have initrd
 	if (!prop)
 		return;
 	start = of_read_number(prop, len/4);
@@ -691,6 +695,7 @@ u64 __init dt_mem_next_cell(int s, __be32 **cellp)
 /**
  * early_init_dt_scan_memory - Look for an parse memory nodes
  */
+///TP: this function called until the end of dtb
 int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 				     int depth, void *data)
 {
@@ -715,12 +720,12 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 	if (reg == NULL)
 		return 0;
 
-	endp = reg + (l / sizeof(__be32));
+	endp = reg + (l / sizeof(__be32));  ///TP: l = 8
 
 	pr_debug("memory scan node %s, reg size %ld, data: %x %x %x %x,\n",
-	    uname, l, reg[0], reg[1], reg[2], reg[3]);
+	    uname, l, reg[0], reg[1], reg[2], reg[3]);    ///TP: for exynos5420, memory, 8, 20000000, 80000000
 
-	while ((endp - reg) >= (dt_root_addr_cells + dt_root_size_cells)) {
+	while ((endp - reg) >= (dt_root_addr_cells + dt_root_size_cells)) { ///TP: the former: address, the latter: count
 		u64 base, size;
 
 		base = dt_mem_next_cell(dt_root_addr_cells, &reg);
@@ -737,8 +742,16 @@ int __init early_init_dt_scan_memory(unsigned long node, const char *uname,
 	return 0;
 }
 
-int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,
-				     int depth, void *data)
+///TP:
+/* exynos5420-smdk5420.dtb.xxd
+00000d0: 4f53 3534 3230 0000 0000 0001 6368 6f73  OS5420......chos
+00000e0: 656e 0000 0000 0003 0000 0025 0000 003d  en.........%...=
+00000f0: 636f 6e73 6f6c 653d 7474 7953 4143 322c  console=ttySAC2,
+0000100: 3131 3532 3030 2069 6e69 743d 2f6c 696e  115200 init=/lin
+0000110: 7578 7263 0000 0000 0000 0002 0000 0001  uxrc............
+*/
+int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,   ///TP: node=address of FDT_PROP, uname="chosen" 
+				     int depth, void *data)   ///TP: depth=1, data=boot_command_line 
 {
 	unsigned long l;
 	char *p;
@@ -746,7 +759,7 @@ int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,
 	pr_debug("search \"chosen\", depth: %d, uname: %s\n", depth, uname);
 
 	if (depth != 1 || !data ||
-	    (strcmp(uname, "chosen") != 0 && strcmp(uname, "chosen@0") != 0))
+	    (strcmp(uname, "chosen") != 0 && strcmp(uname, "chosen@0") != 0))   ///TP: bypass
 		return 0;
 
 	early_init_dt_check_for_initrd(node);
@@ -754,16 +767,16 @@ int __init early_init_dt_scan_chosen(unsigned long node, const char *uname,
 	/* Retrieve command line */
 	p = of_get_flat_dt_prop(node, "bootargs", &l);
 	if (p != NULL && l > 0)
-		strlcpy(data, p, min((int)l, COMMAND_LINE_SIZE));
+		strlcpy(data, p, min((int)l, COMMAND_LINE_SIZE));///TP: if no, bootargs="console=ttySAC2,115200 init=/linuxrc" in exynos5420 dtb 
 
 	/*
 	 * CONFIG_CMDLINE is meant to be a default in case nothing else
 	 * managed to set the command line, unless CONFIG_CMDLINE_FORCE
 	 * is set in which case we override whatever was found earlier.
 	 */
-#ifdef CONFIG_CMDLINE
+#ifdef CONFIG_CMDLINE ///TP: CONFIG_CMDLINE="root=/dev/ram0 rw ramdisk=8192 initrd=0x41000000,8M console=ttySAC1,115200 init=/linuxrc mem=256M"
 #ifndef CONFIG_CMDLINE_FORCE
-	if (!((char *)data)[0])
+	if (!((char *)data)[0]) ///TP: if there is no bootargs in dtb or atags, use the default
 #endif
 		strlcpy(data, CONFIG_CMDLINE, COMMAND_LINE_SIZE);
 #endif /* CONFIG_CMDLINE */

@@ -72,12 +72,14 @@ extern const struct machine_desc *machine_desc;
  */
 extern const struct machine_desc __arch_info_begin[], __arch_info_end[];
 #define for_each_machine_desc(p)			\
-	for (p = __arch_info_begin; p < __arch_info_end; p++)
+	for (p = __arch_info_begin; p < __arch_info_end; p++)   ///TP: section: .arch.info.init
 
 /*
  * Set of macros to define architecture features.  This is built into
  * a table by the linker.
  */
+///TP: refer to arch/arm/mach-exynos/mach-exynos5-dt.c
+//exynos5 dt_compat "samsung,exynos5250" "samsung,exynos5420" "samsung,exynos5440"
 #define MACHINE_START(_type,_name)			\
 static const struct machine_desc __mach_desc_##_type	\
  __used							\
