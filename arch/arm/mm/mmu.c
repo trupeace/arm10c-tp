@@ -341,10 +341,10 @@ EXPORT_SYMBOL(get_mem_type);
 static void __init build_mem_type_table(void)
 {
 	struct cachepolicy *cp;
-	unsigned int cr = get_cr();
+	unsigned int cr = get_cr();   ///TP:SCTLR, cr=10c53c7f(TI DM385)
 	pteval_t user_pgprot, kern_pgprot, vecs_pgprot;
 	pteval_t hyp_device_pgprot, s2_pgprot, s2_device_pgprot;
-	int cpu_arch = cpu_architecture();
+	int cpu_arch = cpu_architecture();      ///TP:CPU_ARCH_ARMv7
 	int i;
 
 	if (cpu_arch < CPU_ARCH_ARMv6) {
@@ -362,7 +362,7 @@ static void __init build_mem_type_table(void)
 		ecc_mask = 0;
 	}
 	if (is_smp())
-		cachepolicy = CPOLICY_WRITEALLOC;
+		cachepolicy = CPOLICY_WRITEALLOC;     ///TP: WB,WA cache
 
 	/*
 	 * Strip out features not present on earlier architectures.
@@ -398,8 +398,9 @@ static void __init build_mem_type_table(void)
 	/*
 	 * Mark the device areas according to the CPU/architecture.
 	 */
+	///TP: crval	clear=0x2120c302, mmuset=0x10c03c7d, ucset=0x00c01c7c
 	if (cpu_is_xsc3() || (cpu_arch >= CPU_ARCH_ARMv6 && (cr & CR_XP))) {
-		if (!cpu_is_xsc3()) {
+		if (!cpu_is_xsc3()) {   ///TP: taken
 			/*
 			 * Mark device regions on ARMv6+ as execute-never
 			 * to prevent speculative instruction fetches.
@@ -409,7 +410,7 @@ static void __init build_mem_type_table(void)
 			mem_types[MT_DEVICE_CACHED].prot_sect |= PMD_SECT_XN;
 			mem_types[MT_DEVICE_WC].prot_sect |= PMD_SECT_XN;
 		}
-		if (cpu_arch >= CPU_ARCH_ARMv7 && (cr & CR_TRE)) {
+		if (cpu_arch >= CPU_ARCH_ARMv7 && (cr & CR_TRE)) {   ///TP: taken
 			/*
 			 * For ARMv7 with TEX remapping,
 			 * - shared device is SXCB=1100
@@ -453,10 +454,10 @@ static void __init build_mem_type_table(void)
 	/*
 	 * Now deal with the memory-type mappings
 	 */
-	cp = &cache_policies[cachepolicy];
-	vecs_pgprot = kern_pgprot = user_pgprot = cp->pte;
-	s2_pgprot = cp->pte_s2;
-	hyp_device_pgprot = s2_device_pgprot = mem_types[MT_DEVICE].prot_pte;
+	cp = &cache_policies[cachepolicy];      ///TP: cachepolicy=CPOLICY_WRITEALLOC
+	vecs_pgprot = kern_pgprot = user_pgprot = cp->pte;    ///TP: cache_policies[CPOLICY_WRITEALLOC] = L_PTE_MT_WRITEALLOC
+	s2_pgprot = cp->pte_s2;     ///TP: for LPAE 
+	hyp_device_pgprot = s2_device_pgprot = mem_types[MT_DEVICE].prot_pte;     ///TP: why mem_types?, not cache_policies
 
 	/*
 	 * ARMv6 and above have extended page tables.
@@ -467,7 +468,7 @@ static void __init build_mem_type_table(void)
 		 * Mark cache clean areas and XIP ROM read only
 		 * from SVC mode and no access from userspace.
 		 */
-		mem_types[MT_ROM].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
+		mem_types[MT_ROM].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;        ///TP: PMD_SECT_APX stands for READONLY
 		mem_types[MT_MINICLEAN].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
 		mem_types[MT_CACHECLEAN].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
 #endif
@@ -500,7 +501,7 @@ static void __init build_mem_type_table(void)
 	if (cpu_arch >= CPU_ARCH_ARMv6) {
 		if (cpu_arch >= CPU_ARCH_ARMv7 && (cr & CR_TRE)) {
 			/* Non-cacheable Normal is XCB = 001 */
-			mem_types[MT_MEMORY_NONCACHED].prot_sect |=
+			mem_types[MT_MEMORY_NONCACHED].prot_sect |=     ///TP: taken
 				PMD_SECT_BUFFERED;
 		} else {
 			/* For both ARMv6 and non-TEX-remapping ARMv7 */
@@ -526,7 +527,7 @@ static void __init build_mem_type_table(void)
 
 	for (i = 0; i < 16; i++) {
 		pteval_t v = pgprot_val(protection_map[i]);
-		protection_map[i] = __pgprot(v | user_pgprot);
+		protection_map[i] = __pgprot(v | user_pgprot);        ///TP: cache_policies[CPOLICY_WRITEALLOC] = L_PTE_MT_WRITEALLOC
 	}
 
 	mem_types[MT_LOW_VECTORS].prot_pte |= vecs_pgprot;
@@ -955,7 +956,7 @@ void __init debug_ll_io_init(void)
 #endif
 
 static void * __initdata vmalloc_min =
-	(void *)(VMALLOC_END - (240 << 20) - VMALLOC_OFFSET);
+	(void *)(VMALLOC_END - (240 << 20) - VMALLOC_OFFSET); ///TP: 0xff00_0000 - 0x0f00_0000 - 0x0080_0000, vmalloc_size=240MB, offset=8MB for out of bound protection
 
 /*
  * vmalloc=size forces the vmalloc area to be exactly 'size'
@@ -987,13 +988,17 @@ early_param("vmalloc", early_vmalloc);
 
 phys_addr_t arm_lowmem_limit __initdata = 0;
 
+///TP:	memory { reg = <0x20000000 0x80000000>; };
+///               permanently mapped:  0x20000000-0x6f7f_ffff size:0x4f800000
+/// (high memory) virtually   mapped:  0x6f800000-0x9fff_ffff size:0x30800000
+/// managing high memory. Do not confuse malloc setup
 void __init sanity_check_meminfo(void)
 {
 	phys_addr_t memblock_limit = 0;
 	int i, j, highmem = 0;
-	phys_addr_t vmalloc_limit = __pa(vmalloc_min - 1) + 1;
+	phys_addr_t vmalloc_limit = __pa(vmalloc_min - 1) + 1;  ///TP: vmalloc_min:0xef80_0000 -> 0x6f80_0000, 0x4f800000
 
-	for (i = 0, j = 0; i < meminfo.nr_banks; i++) {
+	for (i = 0, j = 0; i < meminfo.nr_banks; i++) {   ///TP: j is number of bank for splitted memory
 		struct membank *bank = &meminfo.bank[j];
 		phys_addr_t size_limit;
 
@@ -1021,12 +1026,12 @@ void __init sanity_check_meminfo(void)
 					(meminfo.nr_banks - i) * sizeof(*bank));
 				meminfo.nr_banks++;
 				i++;
-				bank[1].size -= size_limit;
-				bank[1].start = vmalloc_limit;
+				bank[1].size -= size_limit;     ///TP: bank.size or 0x30800000
+				bank[1].start = vmalloc_limit;  ///TP: 0x6f800000
 				bank[1].highmem = highmem = 1;
 				j++;
 			}
-			bank->size = size_limit;
+			bank->size = size_limit;    //0x0x4f800000
 		}
 #else
 		/*
@@ -1054,9 +1059,9 @@ void __init sanity_check_meminfo(void)
 		}
 #endif
 		if (!bank->highmem) {
-			phys_addr_t bank_end = bank->start + bank->size;
+			phys_addr_t bank_end = bank->start + bank->size; ///TP: 0x6f800000 = 0x20000000 + 0x4f800000
 
-			if (bank_end > arm_lowmem_limit)
+			if (bank_end > arm_lowmem_limit)    ///TP:initially arm_lowmem_limit=0
 				arm_lowmem_limit = bank_end;
 
 			/*
@@ -1102,7 +1107,7 @@ void __init sanity_check_meminfo(void)
 	}
 #endif
 	meminfo.nr_banks = j;
-	high_memory = __va(arm_lowmem_limit - 1) + 1;
+	high_memory = __va(arm_lowmem_limit - 1) + 1;     ///TP:0x6f800000 
 
 	/*
 	 * Round the memblock limit down to a section size.  This
@@ -1156,7 +1161,7 @@ static inline void prepare_page_table(void)
 #define SWAPPER_PG_DIR_SIZE	(PAGE_SIZE + \
 				 PTRS_PER_PGD * PTRS_PER_PMD * sizeof(pmd_t))
 #else
-#define SWAPPER_PG_DIR_SIZE	(PTRS_PER_PGD * sizeof(pgd_t))
+#define SWAPPER_PG_DIR_SIZE	(PTRS_PER_PGD * sizeof(pgd_t))      ///TP: 4096*4B = 2048*8B, why? linux manage section as a pair to align pte 4kB, pgd != section, pgd=2MB
 #endif
 
 /*
@@ -1168,7 +1173,7 @@ void __init arm_mm_memblock_reserve(void)
 	 * Reserve the page tables.  These are already in use,
 	 * and can only be in node 0.
 	 */
-	memblock_reserve(__pa(swapper_pg_dir), SWAPPER_PG_DIR_SIZE);
+	memblock_reserve(__pa(swapper_pg_dir), SWAPPER_PG_DIR_SIZE);    ///TP:swapper_pg_dir: page table for mmu
 
 #ifdef CONFIG_SA1111
 	/*

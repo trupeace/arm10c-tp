@@ -241,7 +241,7 @@ static int __init early_serial8250_setup(char *options)
 }
 
 int __init setup_early_serial8250_console(char *cmdline)
-{
+{   ///TP: val("ttySAC2,115200")
 	char *options;
 	int err;
 

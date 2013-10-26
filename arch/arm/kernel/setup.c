@@ -122,7 +122,7 @@ EXPORT_SYMBOL(outer_cache);
  * variable directly.
  */
 /// __read_mostly: seperate section which is assumed to be used frequently, for cache hit rate
-int __cpu_architecture __read_mostly = CPU_ARCH_UNKNOWN;
+int __cpu_architecture __read_mostly = CPU_ARCH_UNKNOWN;    ///TP: CPU_ARCH_ARMv7
 
 struct stack {
 	u32 irq[3];
@@ -571,7 +571,7 @@ static void __init setup_processor(void)
 	}
 
 	cpu_name = list->cpu_name;    ///TP: "ARMv7 Processor"
-	__cpu_architecture = __get_cpu_architecture(); ///TP: Main ID 0x410fc0f0
+	__cpu_architecture = __get_cpu_architecture(); ///TP: CPU_ARCH_ARMv7, Main ID 0x410fc0f0
 
 #ifdef MULTI_CPU
 	processor = *list->proc;
@@ -859,7 +859,7 @@ void __init setup_arch(char **cmdline_p)
 	const struct machine_desc *mdesc;
 
 	setup_processor();
-	mdesc = setup_machine_fdt(__atags_pointer);   ///TP: setup model, bootargs, memory
+	mdesc = setup_machine_fdt(__atags_pointer);   ///TP: setup model, boot_command_line(bootargs in dtb), memory
 	if (!mdesc)
 		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);
 	machine_desc = mdesc;
@@ -875,15 +875,16 @@ void __init setup_arch(char **cmdline_p)
 	init_mm.end_data   = (unsigned long) _edata;
 	init_mm.brk	   = (unsigned long) _end;
 
+  ///TP: 20131017
 	/* populate cmd_line too for later use, preserving boot_command_line */
 	strlcpy(cmd_line, boot_command_line, COMMAND_LINE_SIZE);
-	*cmdline_p = cmd_line;
+	*cmdline_p = cmd_line;    ///TP: setup_arch parameter
 
 	parse_early_param();
 
-	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
+	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);    ///TP: lib/sort.c, heapsort, sort meminfo.bank[] by start pfn(page frame number) address is full range unsigned 32b, which makes 32b compare fail, thus use pfn!!!
 	sanity_check_meminfo();
-	arm_memblock_init(&meminfo, mdesc);
+	arm_memblock_init(&meminfo, mdesc);   ///TP: refering meminfo, init memblock.memory and reserve memblock.reserved for kernel, dtb, DMA, video buffer, ...
 
 	paging_init(mdesc);
 	request_standard_resources(mdesc);

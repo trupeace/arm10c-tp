@@ -113,7 +113,7 @@ void __init dma_contiguous_reserve(phys_addr_t limit)
 	if (size_cmdline != -1) {
 		selected_size = size_cmdline;
 	} else {
-#ifdef CONFIG_CMA_SIZE_SEL_MBYTES
+#ifdef CONFIG_CMA_SIZE_SEL_MBYTES     ///TP: CMA=Contiguous Memory Allocator for non IO-map or scatter-gather DMA
 		selected_size = size_bytes;
 #elif defined(CONFIG_CMA_SIZE_SEL_PERCENTAGE)
 		selected_size = cma_early_percent_memory();

@@ -321,7 +321,7 @@ static void __init arm_memory_present(void)
 }
 #endif
 
-static bool arm_memblock_steal_permitted = true;
+static bool arm_memblock_steal_permitted = true;        /// set to false by arm_memblock_init()
 
 phys_addr_t __init arm_memblock_steal(phys_addr_t size, phys_addr_t align)
 {
@@ -341,16 +341,17 @@ void __init arm_memblock_init(struct meminfo *mi,
 {
 	int i;
 
-	for (i = 0; i < mi->nr_banks; i++)
-		memblock_add(mi->bank[i].start, mi->bank[i].size);
+	for (i = 0; i < mi->nr_banks; i++)      ///TP: 2banks, normal(1), highmem(1)
+		memblock_add(mi->bank[i].start, mi->bank[i].size); ///TP: set memblck using meminfo, merge the compatible neighboring region, exynos5420 1 memory.regions 0x4000_0000 0x8000_0000
 
 	/* Register the kernel text, kernel data and initrd with memblock. */
 #ifdef CONFIG_XIP_KERNEL
 	memblock_reserve(__pa(_sdata), _end - _sdata);
 #else
-	memblock_reserve(__pa(_stext), _end - _stext);
+	memblock_reserve(__pa(_stext), _end - _stext);      /// 0x40008000, size<16 or 8MB, reserve kernel already using memory such as kernel image, initrd, dtb
 #endif
 #ifdef CONFIG_BLK_DEV_INITRD
+  ///TP: add initrd to memblock.reserve
 	if (phys_initrd_size &&
 	    !memblock_is_region_memory(phys_initrd_start, phys_initrd_size)) {
 		pr_err("INITRD: 0x%08llx+0x%08lx is not a memory region - disabling initrd\n",
@@ -367,17 +368,17 @@ void __init arm_memblock_init(struct meminfo *mi,
 		memblock_reserve(phys_initrd_start, phys_initrd_size);
 
 		/* Now convert initrd to virtual addresses */
-		initrd_start = __phys_to_virt(phys_initrd_start);
+		initrd_start = __phys_to_virt(phys_initrd_start);   ///TP:in init/do_mounts_initrd.c, not arch/arm/boot/bootp/initrd.S, bootp for zImage
 		initrd_end = initrd_start + phys_initrd_size;
 	}
 #endif
 
-	arm_mm_memblock_reserve();
-	arm_dt_memblock_reserve();
+	arm_mm_memblock_reserve();    ///TP: reserve swapper_pg_dir(page table)
+	arm_dt_memblock_reserve();    ///TP: reserve dtb itself and memory reserve map in dtb
 
 	/* reserve any platform specific memblock areas */
 	if (mdesc->reserve)
-		mdesc->reserve();
+		mdesc->reserve();     ///TP: for exynos5250, reserve memory for MFC(Multi Format Codec), for example, reserve memory for video/audio buffer
 
 	early_init_dt_scan_reserved_mem();
 
@@ -385,11 +386,11 @@ void __init arm_memblock_init(struct meminfo *mi,
 	 * reserve memory for DMA contigouos allocations,
 	 * must come from DMA area inside low memory
 	 */
-	dma_contiguous_reserve(min(arm_dma_limit, arm_lowmem_limit));
+	dma_contiguous_reserve(min(arm_dma_limit, arm_lowmem_limit));     ///for some DMA which doesnot support IOmap or scatter-gather, reserve cma memory, may be ZONE_DMA block(?)
 
-	arm_memblock_steal_permitted = false;
+	arm_memblock_steal_permitted = false;     ///TP: do not steal memblock
 	memblock_allow_resize();
-	memblock_dump_all();
+	memblock_dump_all();      /// for debug, print memblock.memory & reserved regions
 }
 
 void __init bootmem_init(void)

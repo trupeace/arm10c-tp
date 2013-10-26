@@ -23,20 +23,23 @@
 static struct memblock_region memblock_memory_init_regions[INIT_MEMBLOCK_REGIONS] __initdata_memblock;
 static struct memblock_region memblock_reserved_init_regions[INIT_MEMBLOCK_REGIONS] __initdata_memblock;
 
+///TP:
+/// bank0: 0x20000000, 0x4f800000, normal
+/// bank1: 0x6f800000, 0x30800000, highmem
 struct memblock memblock __initdata_memblock = {
-	.memory.regions		= memblock_memory_init_regions,
+	.memory.regions		= memblock_memory_init_regions,     ///TP: physical memory bank(neighboring region merged), exynos5420 has 1 region such as 0x80000000@0x40000000
 	.memory.cnt		= 1,	/* empty dummy entry */
 	.memory.max		= INIT_MEMBLOCK_REGIONS,
 
-	.reserved.regions	= memblock_reserved_init_regions,
+	.reserved.regions	= memblock_reserved_init_regions,   ///TP: reserved such as Kernel (base:_stext)
 	.reserved.cnt		= 1,	/* empty dummy entry */
 	.reserved.max		= INIT_MEMBLOCK_REGIONS,
 
-	.current_limit		= MEMBLOCK_ALLOC_ANYWHERE,
+	.current_limit		= MEMBLOCK_ALLOC_ANYWHERE,  ///TP: 0x6f800000 by sanity_check_meminfo()
 };
 
 int memblock_debug __initdata_memblock;
-static int memblock_can_resize __initdata_memblock;
+static int memblock_can_resize __initdata_memblock;       ///TP: set to 1 by arm_memblock_init()
 static int memblock_memory_in_slab __initdata_memblock = 0;
 static int memblock_reserved_in_slab __initdata_memblock = 0;
 
@@ -361,6 +364,9 @@ static void __init_memblock memblock_insert_region(struct memblock_type *type,
  * RETURNS:
  * 0 on success, -errno on failure.
  */
+///TP: __init_memblock: currently no discard 
+/// bank0: 0x20000000, 0x4f800000, normal
+/// bank1: 0x6f800000, 0x30800000, highmem
 static int __init_memblock memblock_add_region(struct memblock_type *type,
 				phys_addr_t base, phys_addr_t size, int nid)
 {
@@ -373,12 +379,12 @@ static int __init_memblock memblock_add_region(struct memblock_type *type,
 		return 0;
 
 	/* special case for empty array */
-	if (type->regions[0].size == 0) {
-		WARN_ON(type->cnt != 1 || type->total_size);
+	if (type->regions[0].size == 0) {       /// normally, condition met only once at the first call
+		WARN_ON(type->cnt != 1 || type->total_size);    ///TPQ: why initial cnt = 1, empty array?
 		type->regions[0].base = base;
 		type->regions[0].size = size;
 		memblock_set_region_node(&type->regions[0], nid);
-		type->total_size = size;
+		type->total_size = size;    ///TP: total_size is the sum of regions[].size
 		return 0;
 	}
 repeat:
@@ -390,6 +396,8 @@ repeat:
 	base = obase;
 	nr_new = 0;
 
+        ///TP: find the location to insert, assumes that memblock is sorted
+        /// bank1: 0x6f800000, 0x30800000, highmem
 	for (i = 0; i < type->cnt; i++) {
 		struct memblock_region *rgn = &type->regions[i];
 		phys_addr_t rbase = rgn->base;
@@ -399,7 +407,7 @@ repeat:
 			break;
 		if (rend <= base)
 			continue;
-		/*
+		/* from here to for_end, only for overlapped region
 		 * @rgn overlaps.  If it separates the lower part of new
 		 * area, insert that portion.
 		 */
@@ -431,7 +439,7 @@ repeat:
 		insert = true;
 		goto repeat;
 	} else {
-		memblock_merge_regions(type);
+		memblock_merge_regions(type); ///TP: merge neighboring compatible regions
 		return 0;
 	}
 }
@@ -444,7 +452,7 @@ int __init_memblock memblock_add_node(phys_addr_t base, phys_addr_t size,
 
 int __init_memblock memblock_add(phys_addr_t base, phys_addr_t size)
 {
-	return memblock_add_region(&memblock.memory, base, size, MAX_NUMNODES);
+	return memblock_add_region(&memblock.memory, base, size, MAX_NUMNODES); ///TP: MAX_NUMNODES: nodes in NUMA, TPC: need to be modified in NUMA
 }
 
 /**

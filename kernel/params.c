@@ -92,7 +92,7 @@ static int parse_one(char *param,
 		     s16 max_level,
 		     int (*handle_unknown)(char *param, char *val,
 				     const char *doing))
-{
+{ ///TP: parse_one(param("console"), val("ttySAC2,115200"), "early options", NULL, 0, 0, 0, do_early_param);
 	unsigned int i;
 	int err;
 
@@ -131,8 +131,11 @@ static char *next_arg(char *args, char **param, char **val)
 	unsigned int i, equals = 0;
 	int in_quote = 0, quoted = 0;
 	char *next;
-
-	if (*args == '"') {
+  ///TP: args=console=ttySAC2,115200 init=/linuxrc
+  /// case 1: console="ttySAC2,115200"    O
+  /// case 2: "console=ttySAC2,115200"    O
+  /// case 3: "console="ttySAC2,115200""  X
+	if (*args == '"') {   ///TP: for case2
 		args++;
 		in_quote = 1;
 		quoted = 1;
@@ -157,12 +160,12 @@ static char *next_arg(char *args, char **param, char **val)
 		*val = args + equals + 1;
 
 		/* Don't include quotes in value. */
-		if (**val == '"') {
+		if (**val == '"') {       ///TP: for case 1
 			(*val)++;
-			if (args[i-1] == '"')
+			if (args[i-1] == '"') 
 				args[i-1] = '\0';
 		}
-		if (quoted && args[i-1] == '"')
+		if (quoted && args[i-1] == '"')   ///TP: for case 2
 			args[i-1] = '\0';
 	}
 
@@ -170,14 +173,14 @@ static char *next_arg(char *args, char **param, char **val)
 		args[i] = '\0';
 		next = args + i + 1;
 	} else
-		next = args + i;
+		next = args + i;    ///TP: end of string
 
 	/* Chew up trailing spaces. */
 	return skip_spaces(next);
 }
 
 /* Args looks like "foo=bar,bar2 baz=fuz wiz". */
-int parse_args(const char *doing,
+int parse_args(const char *doing,       ///TP: parse_args("early options", cmdline, NULL, 0, 0, 0, do_early_param);
 	       char *args,
 	       const struct kernel_param *params,
 	       unsigned num,
@@ -188,7 +191,7 @@ int parse_args(const char *doing,
 	char *param, *val;
 
 	/* Chew leading spaces */
-	args = skip_spaces(args);
+	args = skip_spaces(args); ///TP: remove leading ' 's, args="console=ttySAC2,115200 init=/linuxrc" from exynos5420-smdk5420.dtb
 
 	if (*args)
 		pr_debug("doing %s, parsing ARGS: '%s'\n", doing, args);
@@ -198,7 +201,7 @@ int parse_args(const char *doing,
 		int irq_was_disabled;
 
 		args = next_arg(args, &param, &val);
-		irq_was_disabled = irqs_disabled();
+		irq_was_disabled = irqs_disabled();   ///TP: read CPSR and mask I_BIT
 		ret = parse_one(param, val, doing, params, num,
 				min_level, max_level, unknown);
 		if (irq_was_disabled && !irqs_disabled())

@@ -50,7 +50,7 @@ typedef struct { pteval_t pgprot; } pgprot_t;
  */
 typedef pteval_t pte_t;
 typedef pmdval_t pmd_t;
-typedef pmdval_t pgd_t[2];
+typedef pmdval_t pgd_t[2];          ///TP: not independent sections, consecutive 2MB
 typedef pteval_t pgprot_t;
 
 #define pte_val(x)      (x)

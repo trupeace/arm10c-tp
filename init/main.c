@@ -393,15 +393,16 @@ static noinline void __init_refok rest_init(void)
 
 /* Check for early params. */
 static int __init do_early_param(char *param, char *val, const char *unused)
-{
+{ ///TP: param("console"), val("ttySAC2,115200"), "early options"
 	const struct obs_kernel_param *p;
 
+  ///early_param("earlycon", setup_early_serial8250_console); => __setup_param(str, fn, fn, 1)
 	for (p = __setup_start; p < __setup_end; p++) {
-		if ((p->early && parameq(param, p->str)) ||
+		if ((p->early && parameq(param, p->str)) ||     ///TP: no ealry for param "init" => bypass init
 		    (strcmp(param, "console") == 0 &&
 		     strcmp(p->str, "earlycon") == 0)
 		) {
-			if (p->setup_func(val) != 0)
+			if (p->setup_func(val) != 0)    ///TP:setup_early_serial8250_console(val)
 				pr_warn("Malformed early option '%s'\n", param);
 		}
 	}
@@ -425,7 +426,7 @@ void __init parse_early_param(void)
 
 	/* All fall through to do_early_param. */
 	strlcpy(tmp_cmdline, boot_command_line, COMMAND_LINE_SIZE);
-	parse_early_options(tmp_cmdline);
+	parse_early_options(tmp_cmdline);     ///TP: only called once
 	done = 1;
 }
 

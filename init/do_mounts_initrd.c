@@ -20,7 +20,7 @@
 
 #include "do_mounts.h"
 
-unsigned long initrd_start, initrd_end;
+unsigned long initrd_start, initrd_end;  ///TP: setup by setup_arch()->arm_memblock_init(), same to phys_initrd_start,end set by start_kernel().setup_arch().early_init_dt_check_for_initrd()
 int initrd_below_start_ok;
 unsigned int real_root_dev;	/* do_proc_dointvec cannot handle kdev_t */
 static int __initdata mount_initrd = 1;
