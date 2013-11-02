@@ -33,7 +33,7 @@
  * CPUs based on ARMv6+ or the Intel XSC3 core.
  */
 #ifndef CONFIG_IO_36
-#define DOMAIN_KERNEL	0
+#define DOMAIN_KERNEL	0     /// 32b addressing use this
 #define DOMAIN_TABLE	0
 #define DOMAIN_USER	1
 #define DOMAIN_IO	2
@@ -41,7 +41,7 @@
 #define DOMAIN_KERNEL	2
 #define DOMAIN_TABLE	2
 #define DOMAIN_USER	1
-#define DOMAIN_IO	0
+#define DOMAIN_IO	0     ///TP:supersections needs domain 0 
 #endif
 
 /*

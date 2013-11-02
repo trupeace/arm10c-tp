@@ -71,12 +71,21 @@ static inline void dsb_sev(void)
 
 #define arch_spin_lock_flags(lock, flags) arch_spin_lock(lock)
 
+///TP: blocking acquire
+///  spin lock explanation: http://studyfoss.egloos.com/5144295
 static inline void arch_spin_lock(arch_spinlock_t *lock)
 {
 	unsigned long tmp;
 	u32 newval;
 	arch_spinlock_t lockval;
 
+        ///TP: get next ticket number, update next for the next request
+        /// this code can be fixed halfword ldr/str 
+        /// imagine bank waiting ticket system!!!
+        /// diff: in bank, event windows share one ticket machine
+        ///               ticket automactically update number
+        ///       spin lock has its own ticket machine
+        ///               lock user update next number
 	__asm__ __volatile__(
 "1:	ldrex	%0, [%3]\n"
 "	add	%1, %0, %4\n"
@@ -87,6 +96,8 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	: "r" (&lock->slock), "I" (1 << TICKET_SHIFT)
 	: "cc");
 
+        ///TP: slock = [next,owner]
+        // next is local which diff. tasks have its own next id 
 	while (lockval.tickets.next != lockval.tickets.owner) {
 		wfe();
 		lockval.tickets.owner = ACCESS_ONCE(lock->tickets.owner);
@@ -95,16 +106,18 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	smp_mb();
 }
 
+///TP: non-blocking acquire
 static inline int arch_spin_trylock(arch_spinlock_t *lock)
 {
 	unsigned long contended, res;
 	u32 slock;
 
+        ///TP: owner is lsb
 	do {
 		__asm__ __volatile__(
 		"	ldrex	%0, [%3]\n"
 		"	mov	%2, #0\n"
-		"	subs	%1, %0, %0, ror #16\n"
+		"	subs	%1, %0, %0, ror #16\n"      ///TP if (next == owner)
 		"	addeq	%0, %0, %4\n"
 		"	strexeq	%2, %0, [%3]"
 		: "=&r" (slock), "=&r" (contended), "=&r" (res)
@@ -124,7 +137,7 @@ static inline void arch_spin_unlock(arch_spinlock_t *lock)
 {
 	smp_mb();
 	lock->tickets.owner++;
-	dsb_sev();
+	dsb_sev();    ///TP: dsb & sev(send_event, wake other cores)
 }
 
 static inline int arch_spin_is_locked(arch_spinlock_t *lock)

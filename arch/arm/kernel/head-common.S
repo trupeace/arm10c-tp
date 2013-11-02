@@ -81,20 +81,29 @@ __mmap_switched:
 	adr	r3, __mmap_switched_data
 
 	ldmia	r3!, {r4, r5, r6, r7}
+///TP:  r4: __data_loc	
+///TP:  r5: _sdata		
+///TP:  r6: __bss_start	
+///TP:  r7: _end		
 	cmp	r4, r5				@ Copy data segment if needed
 1:	cmpne	r5, r6
-	ldrne	fp, [r4], #4
+	ldrne	fp, [r4], #4    ///TP: fp(r11)
 	strne	fp, [r5], #4
 	bne	1b
 
 	mov	fp, #0				@ Clear BSS (and zero fp)
 1:	cmp	r6, r7
-	strcc	fp, [r6],#4
+	strcc	fp, [r6],#4     ///cc=carry clear=lower than=lt
 	bcc	1b
 
  ARM(	ldmia	r3, {r4, r5, r6, r7, sp})
  THUMB(	ldmia	r3, {r4, r5, r6, r7}	)
  THUMB(	ldr	sp, [r3, #16]		)
+///TP:  r4: processor_id			@ r4=0xc04f6214 
+///TP:  r5: __machine_arch_type		        @ r5=0xc04c840c 
+///TP:  r6: __atags_pointer			@ r6=0xc04aa9dc 
+///TP:  r7: cr_alignment			@ r7=0xc04cbbd4     
+///TP:  sp: init_thread_union + THREAD_START_SP @ sp=0xc04c1ff8
 	str	r9, [r4]			@ Save processor ID
 	str	r1, [r5]			@ Save machine type
 	str	r2, [r6]			@ Save atags pointer
@@ -107,19 +116,19 @@ ENDPROC(__mmap_switched)
 	.align	2
 	.type	__mmap_switched_data, %object
 __mmap_switched_data:
-	.long	__data_loc			@ r4
-	.long	_sdata				@ r5
-	.long	__bss_start			@ r6
-	.long	_end				@ r7
-	.long	processor_id			@ r4
-	.long	__machine_arch_type		@ r5
-	.long	__atags_pointer			@ r6
+	.long	__data_loc			@ r4=0xc04c0000
+	.long	_sdata				@ r5=0xc04c0000
+	.long	__bss_start			@ r6=0xc04f6000
+	.long	_end				@ r7=0xc0537e20
+	.long	processor_id			@ r4=0xc04f6214
+	.long	__machine_arch_type		@ r5=0xc04c840c
+	.long	__atags_pointer			@ r6=0xc04aa9dc
 #ifdef CONFIG_CPU_CP15
-	.long	cr_alignment			@ r7
+	.long	cr_alignment			@ r7=0xc04cbbd4
 #else
 	.long	0				@ r7
 #endif
-	.long	init_thread_union + THREAD_START_SP @ sp
+	.long	init_thread_union + THREAD_START_SP @ sp=0xc04c1ff8
 	.size	__mmap_switched_data, . - __mmap_switched_data
 
 /*
@@ -156,6 +165,8 @@ __lookup_processor_type:
 	add	r5, r5, r3			@ convert virt addresses to
 	add	r6, r6, r3			@ physical address space
 1:	ldmia	r5, {r3, r4}			@ value, mask
+  ///TP:  r3: PROC ID: for ca15 0x410fc0f0
+	///     r4: PROC ID: for ca15 0xff0ffff0
 	and	r4, r4, r9			@ mask wanted bits
 	teq	r3, r4
 	beq	2f
@@ -172,6 +183,7 @@ ENDPROC(__lookup_processor_type)
 	.align	2
 	.type	__lookup_processor_type_data, %object
 __lookup_processor_type_data:
+///TP: arch/arm/mm/proc-v7.S
 	.long	.
 	.long	__proc_info_begin
 	.long	__proc_info_end

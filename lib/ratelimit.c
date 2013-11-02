@@ -43,8 +43,9 @@ int ___ratelimit(struct ratelimit_state *rs, const char *func)
 		return 0;
 
 	if (!rs->begin)
-		rs->begin = jiffies;
+		rs->begin = jiffies;    ///TP: set current clocks, update jiffies at timeisr??? 
 
+  ///TP: interval: 5*Hz
 	if (time_is_before_jiffies(rs->begin + rs->interval)) {
 		if (rs->missed)
 			printk(KERN_WARNING "%s: %d callbacks suppressed\n",

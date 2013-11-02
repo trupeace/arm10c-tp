@@ -89,8 +89,8 @@ ENDPROC(v7_flush_icache_all)
 
 ENTRY(v7_flush_dcache_louis)
 	dmb					@ ensure ordering with previous memory accesses
-	mrc	p15, 1, r0, c0, c0, 1		@ read clidr, r0 = clidr
-	ALT_SMP(ands	r3, r0, #(7 << 21))	@ extract LoUIS from clidr
+	mrc	p15, 1, r0, c0, c0, 1		@ read clidr, r0 = clidr  ///TP: cache level id reg, loc, lou, cache typea
+	ALT_SMP(ands	r3, r0, #(7 << 21))	@ extract LoUIS from clidr  ///TP: CA15 LoUIS=1
 	ALT_UP(ands	r3, r0, #(7 << 27))	@ extract LoUU from clidr
 #ifdef CONFIG_ARM_ERRATA_643719
 	ALT_SMP(mrceq	p15, 0, r2, c0, c0, 0)	@ read main ID register
@@ -102,7 +102,7 @@ ENTRY(v7_flush_dcache_louis)
 #endif
 	ALT_SMP(mov	r3, r3, lsr #20)	@ r3 = LoUIS * 2
 	ALT_UP(mov	r3, r3, lsr #26)	@ r3 = LoUU * 2
-	moveq	pc, lr				@ return if level == 0
+	moveq	pc, lr				@ return if level == 0  ///TP: condition by ands
 	mov	r10, #0				@ r10 (starting level) = 0
 	b	flush_levels			@ start flushing cache levels
 ENDPROC(v7_flush_dcache_louis)

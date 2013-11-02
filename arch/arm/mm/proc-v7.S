@@ -189,10 +189,10 @@ __v7_ca15mp_setup:
 	mov	r10, #0
 1:
 #ifdef CONFIG_SMP
-	ALT_SMP(mrc	p15, 0, r0, c1, c0, 1)
+	ALT_SMP(mrc	p15, 0, r0, c1, c0, 1)   ///TP: ACTLR, TRM 4.3.28 
 	ALT_UP(mov	r0, #(1 << 6))		@ fake it for UP
 	tst	r0, #(1 << 6)			@ SMP/nAMP mode enabled?
-	orreq	r0, r0, #(1 << 6)		@ Enable SMP/nAMP mode
+	orreq	r0, r0, #(1 << 6)		@ Enable SMP/nAMP mode    ///ACTLR[6]
 	orreq	r0, r0, r10			@ Enable CPU-specific SMP bits
 	mcreq	p15, 0, r0, c1, c0, 1
 #endif
@@ -264,15 +264,16 @@ __v7_setup:
 	and	r10, r0, #0xff000000		@ ARM?
 	teq	r10, #0x41000000
 	bne	3f
-	and	r5, r0, #0x00f00000		@ variant
-	and	r6, r0, #0x0000000f		@ revision
+	and	r5, r0, #0x00f00000		@ variant   ///TP: major revision
+	and	r6, r0, #0x0000000f		@ revision  ///TP: minor revision
 	orr	r6, r6, r5, lsr #20-4		@ combine variant and revision
-	ubfx	r0, r0, #4, #12			@ primary part number
+	ubfx	r0, r0, #4, #12			@ primary part number ///TP: unsigned bit field extract, lsb, width, MIDR[15:4] = part number
+    ///TP: condition by ands=1
 
 	/* Cortex-A8 Errata */
 	ldr	r10, =0x00000c08		@ Cortex-A8 primary part number
 	teq	r0, r10
-	bne	2f
+	bne	2f        ///TP: not CA8 goto 2f
 #if defined(CONFIG_ARM_ERRATA_430973) && !defined(CONFIG_ARCH_MULTIPLATFORM)
 
 	teq	r5, #0x00100000			@ only present in r1p*
@@ -299,7 +300,7 @@ __v7_setup:
 	/* Cortex-A9 Errata */
 2:	ldr	r10, =0x00000c09		@ Cortex-A9 primary part number
 	teq	r0, r10
-	bne	3f
+	bne	3f        ///TP: not CA9 goto 3f
 #ifdef CONFIG_ARM_ERRATA_742230
 	cmp	r6, #0x22			@ only present up to r2p2
 	mrcle	p15, 0, r10, c15, c0, 1		@ read diagnostic register
@@ -348,29 +349,60 @@ __v7_setup:
 #ifdef CONFIG_MMU
 	mcr	p15, 0, r10, c8, c7, 0		@ invalidate I + D TLBs
 	v7_ttb_setup r10, r4, r8, r5		@ TTBCR, TTBRx setup
-	ldr	r5, =PRRR			@ PRRR
-	ldr	r6, =NMRR			@ NMRR
+	ldr	r5, =PRRR			@ PRRR    ///TP: PRRR=0xff0a81a8 ref: proc-v7-2level.S
+	ldr	r6, =NMRR			@ NMRR    ///TP: NMRR=0x40e040e0 0b0100_0000_1110_0000
+	/*
+	 * Memory region attributes with SCTLR.TRE=1
+	 *
+	 *   n = TEX[0],C,B
+	 *   TR = PRRR[2n+1:2n]		- memory type
+	 *   IR = NMRR[2n+1:2n]		- inner cacheable property
+	 *   OR = NMRR[2n+17:2n+16]	- outer cacheable property
+	 *
+	 *			n	TR	IR	OR
+	 *   UNCACHED		000	00
+	 *   BUFFERABLE		001	10	00	00
+	 *   WRITETHROUGH	010	10	10	10
+	 *   WRITEBACK		011	10	11	11
+	 *   reserved		110
+	 *   WRITEALLOC		111	10	01	01
+	 *   DEV_SHARED		100	01
+	 *   DEV_NONSHARED	100	01
+	 *   DEV_WC		001	10
+	 *   DEV_CACHED		011	10
+	 *
+	 * Other attributes:
+	 *
+	 *   DS0 = PRRR[16] = 0		- device shareable property
+	 *   DS1 = PRRR[17] = 1		- device shareable property
+	 *   NS0 = PRRR[18] = 0		- normal shareable property
+	 *   NS1 = PRRR[19] = 1		- normal shareable property
+	 *   NOS = PRRR[24+n] = 1	- not outer shareable
+	 */
 	mcr	p15, 0, r5, c10, c2, 0		@ write PRRR
 	mcr	p15, 0, r6, c10, c2, 1		@ write NMRR
 #endif
+        ///TP: THUMBEE is deprectated. AARM A1.4.1
 #ifndef CONFIG_ARM_THUMBEE
 	mrc	p15, 0, r0, c0, c1, 0		@ read ID_PFR0 for ThumbEE
 	and	r0, r0, #(0xf << 12)		@ ThumbEE enabled field
 	teq	r0, #(1 << 12)			@ check if ThumbEE is present
 	bne	1f
+        ///TP: if ThumbEE is supported
 	mov	r5, #0
 	mcr	p14, 6, r5, c1, c0, 0		@ Initialize TEEHBR to 0
 	mrc	p14, 6, r0, c0, c0, 0		@ load TEECR
 	orr	r0, r0, #1			@ set the 1st bit in order to
+        ///TP: unprivileged access disable ThumbEE
 	mcr	p14, 6, r0, c0, c0, 0		@ stop userspace TEEHBR access
 1:
 #endif
 	adr	r5, v7_crval
-	ldmia	r5, {r5, r6}
+	ldmia	r5, {r5, r6}      ///TP: clear(r5)=0x2120c302, mmuset(r6)=0x10c03c7d
 #ifdef CONFIG_CPU_ENDIAN_BE8
 	orr	r6, r6, #1 << 25		@ big-endian page tables
 #endif
-#ifdef CONFIG_SWP_EMULATE
+#ifdef CONFIG_SWP_EMULATE   ///TP: SWP instruction emulation, CA15 use LDREX/STREX instead of SWP
 	orr     r5, r5, #(1 << 10)              @ set SW bit in "clear"
 	bic     r6, r6, #(1 << 10)              @ clear it in "mmuset"
 #endif
@@ -378,7 +410,7 @@ __v7_setup:
 	bic	r0, r0, r5			@ clear bits them
 	orr	r0, r0, r6			@ set them
  THUMB(	orr	r0, r0, #1 << 30	)	@ Thumb exceptions
-	mov	pc, lr				@ return to head.S:__ret
+	mov	pc, lr				@ return to head.S:__ret    ///TP: lr=__enable_mmu
 ENDPROC(__v7_setup)
 
 	.align	2
@@ -406,6 +438,7 @@ __v7_setup_stack:
 	 */
 ///TP: proc_info_list 
 .macro __v7_proc initfunc, mm_mmuflags = 0, io_mmuflags = 0, hwcaps = 0, proc_fns = v7_processor_functions
+  ///TP: either ALT_SMP or ALT_UP
 	ALT_SMP(.long	PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_SECT_AP_READ | \
 			PMD_SECT_AF | PMD_FLAGS_SMP | \mm_mmuflags)
 	ALT_UP(.long	PMD_TYPE_SECT | PMD_SECT_AP_WRITE | PMD_SECT_AP_READ | \

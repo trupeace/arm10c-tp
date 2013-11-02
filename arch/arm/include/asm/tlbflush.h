@@ -314,6 +314,8 @@ extern struct cpu_tlb_fns cpu_tlb;
 			    "mcrne " insnarg				\
 			    : : "r" (arg), "r" (__tlb_flag), "Ir" (f)	\
 			    : "cc");					\
+          ///TP:  tst __tlb_flag, f
+          //      mcrne p15, [01], pmd, c7, c10/c9, 1" 
 	} while (0)
 
 #define tlb_op(f, regs, arg)	__tlb_op(f, "p15, 0, %0, " regs, arg)
@@ -619,8 +621,8 @@ static inline void clean_pmd_entry(void *pmd)
 {
 	const unsigned int __tlb_flag = __cpu_tlb_flags;
 
-	tlb_op(TLB_DCLEAN, "c7, c10, 1	@ flush_pmd", pmd);
-	tlb_l2_op(TLB_L2CLEAN_FR, "c15, c9, 1  @ L2 flush_pmd", pmd);
+	tlb_op(TLB_DCLEAN, "c7, c10, 1	@ flush_pmd", pmd);   ///TP: DCCMVAC, Data Cache Clean by MVA to PoC; tst __tlb_flag, f;  mcrne p15, 0, pmd, c7, c10, 1 
+	tlb_l2_op(TLB_L2CLEAN_FR, "c15, c9, 1  @ L2 flush_pmd", pmd);   ///for Feroceon
 }
 
 #undef tlb_op

@@ -33,6 +33,7 @@ extern void error(char *);
 /* Not needed, but used in some headers pulled in by decompressors */
 extern char * strstr(const char * s1, const char *s2);
 
+///TP: refer to .config 
 #ifdef CONFIG_KERNEL_GZIP
 #include "../../../../lib/decompress_inflate.c"
 #endif
@@ -57,5 +58,6 @@ extern char * strstr(const char * s1, const char *s2);
 
 int do_decompress(u8 *input, int len, u8 *output, void (*error)(char *x))
 {
+	///TP: decomprss is defined as gunzip
 	return decompress(input, len, NULL, NULL, output, NULL, error);
 }

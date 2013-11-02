@@ -341,7 +341,7 @@ EXPORT_SYMBOL(get_mem_type);
 static void __init build_mem_type_table(void)
 {
 	struct cachepolicy *cp;
-	unsigned int cr = get_cr();   ///TP:SCTLR, cr=10c53c7f(TI DM385)
+	unsigned int cr = get_cr();   ///TP:SCTLR, cr=0x10c5387d
 	pteval_t user_pgprot, kern_pgprot, vecs_pgprot;
 	pteval_t hyp_device_pgprot, s2_pgprot, s2_device_pgprot;
 	int cpu_arch = cpu_architecture();      ///TP:CPU_ARCH_ARMv7
@@ -454,15 +454,15 @@ static void __init build_mem_type_table(void)
 	/*
 	 * Now deal with the memory-type mappings
 	 */
-	cp = &cache_policies[cachepolicy];      ///TP: cachepolicy=CPOLICY_WRITEALLOC
-	vecs_pgprot = kern_pgprot = user_pgprot = cp->pte;    ///TP: cache_policies[CPOLICY_WRITEALLOC] = L_PTE_MT_WRITEALLOC
-	s2_pgprot = cp->pte_s2;     ///TP: for LPAE 
+	cp = &cache_policies[cachepolicy];      ///TP: cachepolicy=CPOLICY_WRITEALLOC, cp: .policy="writealloc", .cr_mask=0, .pmd=PMD_SECT_WBWA, .pte=L_PTE_MT_WRITEALLOC, .pte_s2=s2_policy(L_PTE_S2_MT_WRITEBACK),
+	vecs_pgprot = kern_pgprot = user_pgprot = cp->pte;    ///TP: L_PTE_MT_WRITEALLOC
+	s2_pgprot = cp->pte_s2;     ///TP: for LPAE, L_PTE_S2_MT_WRITEBACK
 	hyp_device_pgprot = s2_device_pgprot = mem_types[MT_DEVICE].prot_pte;     ///TP: why mem_types?, not cache_policies
 
 	/*
 	 * ARMv6 and above have extended page tables.
 	 */
-	if (cpu_arch >= CPU_ARCH_ARMv6 && (cr & CR_XP)) {
+	if (cpu_arch >= CPU_ARCH_ARMv6 && (cr & CR_XP)) {   ///TP: taken
 #ifndef CONFIG_ARM_LPAE
 		/*
 		 * Mark cache clean areas and XIP ROM read only
@@ -473,12 +473,12 @@ static void __init build_mem_type_table(void)
 		mem_types[MT_CACHECLEAN].prot_sect |= PMD_SECT_APX|PMD_SECT_AP_WRITE;
 #endif
 
-		if (is_smp()) {
+		if (is_smp()) {   ///TP: taken
 			/*
 			 * Mark memory with the "shared" attribute
 			 * for SMP systems
 			 */
-			user_pgprot |= L_PTE_SHARED;
+			user_pgprot |= L_PTE_SHARED;  ///TP: L_PTE_MT_WRITEALLOC | L_PTE_SHARED
 			kern_pgprot |= L_PTE_SHARED;
 			vecs_pgprot |= L_PTE_SHARED;
 			s2_pgprot |= L_PTE_SHARED;
@@ -498,8 +498,8 @@ static void __init build_mem_type_table(void)
 	 * Non-cacheable Normal - intended for memory areas that must
 	 * not cause dirty cache line writebacks when used
 	 */
-	if (cpu_arch >= CPU_ARCH_ARMv6) {
-		if (cpu_arch >= CPU_ARCH_ARMv7 && (cr & CR_TRE)) {
+	if (cpu_arch >= CPU_ARCH_ARMv6) {   ///TP: taken
+		if (cpu_arch >= CPU_ARCH_ARMv7 && (cr & CR_TRE)) {   ///TP: taken
 			/* Non-cacheable Normal is XCB = 001 */
 			mem_types[MT_MEMORY_NONCACHED].prot_sect |=     ///TP: taken
 				PMD_SECT_BUFFERED;
@@ -517,7 +517,7 @@ static void __init build_mem_type_table(void)
 	 * Do not generate access flag faults for the kernel mappings.
 	 */
 	for (i = 0; i < ARRAY_SIZE(mem_types); i++) {
-		mem_types[i].prot_pte |= PTE_EXT_AF;
+		mem_types[i].prot_pte |= PTE_EXT_AF;      ///TP: AF: Access Flag
 		if (mem_types[i].prot_sect)
 			mem_types[i].prot_sect |= PMD_SECT_AF;
 	}
@@ -527,7 +527,7 @@ static void __init build_mem_type_table(void)
 
 	for (i = 0; i < 16; i++) {
 		pteval_t v = pgprot_val(protection_map[i]);
-		protection_map[i] = __pgprot(v | user_pgprot);        ///TP: cache_policies[CPOLICY_WRITEALLOC] = L_PTE_MT_WRITEALLOC
+		protection_map[i] = __pgprot(v | user_pgprot);        ///TP: user_pgprot = L_PTE_MT_WRITEALLOC | L_PTE_SHARED
 	}
 
 	mem_types[MT_LOW_VECTORS].prot_pte |= vecs_pgprot;
@@ -553,11 +553,11 @@ static void __init build_mem_type_table(void)
 		mem_types[MT_CACHECLEAN].prot_sect |= PMD_SECT_WT;
 		break;
 	case PMD_SECT_WB:
-	case PMD_SECT_WBWA:
+	case PMD_SECT_WBWA:    ///TP: PMD_SECT_WBWA
 		mem_types[MT_CACHECLEAN].prot_sect |= PMD_SECT_WB;
 		break;
 	}
-	printk("Memory policy: ECC %sabled, Data cache %s\n",
+	printk("Memory policy: ECC %sabled, Data cache %s\n",     ///TP: "writealloc"
 		ecc_mask ? "en" : "dis", cp->policy);
 
 	for (i = 0; i < ARRAY_SIZE(mem_types); i++) {
@@ -1130,8 +1130,8 @@ static inline void prepare_page_table(void)
 	/*
 	 * Clear out all the mappings below the kernel image.
 	 */
-	for (addr = 0; addr < MODULES_VADDR; addr += PMD_SIZE)
-		pmd_clear(pmd_off_k(addr));
+	for (addr = 0; addr < MODULES_VADDR; addr += PMD_SIZE)    ///TP: clear 0-0xbf000000, step: 2MB section table
+		pmd_clear(pmd_off_k(addr));   ///TP: write into section table, and clean data cache
 
 #ifdef CONFIG_XIP_KERNEL
 	/* The XIP kernel is mapped in the module area -- skip over it */
@@ -1328,7 +1328,7 @@ void __init paging_init(const struct machine_desc *mdesc)
 {
 	void *zero_page;
 
-	build_mem_type_table();
+	build_mem_type_table();   ///TP: depending on processor arch., adjust mem type table, for eg, smp set Shareable 
 	prepare_page_table();
 	map_lowmem();
 	dma_contiguous_remap();

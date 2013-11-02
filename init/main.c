@@ -438,10 +438,10 @@ static void __init boot_cpu_init(void)
 {
 	int cpu = smp_processor_id();
 	/* Mark the boot cpu "present", "online" etc for SMP and UP case */
-	set_cpu_online(cpu, true);
-	set_cpu_active(cpu, true);
-	set_cpu_present(cpu, true);
-	set_cpu_possible(cpu, true);
+	set_cpu_online(cpu, true);    ///TP: cpu exists and scheduler manage it   no hotplugging-> online = active
+	set_cpu_active(cpu, true);    ///TP: cpu exists and can be used when task migration
+	set_cpu_present(cpu, true);   ///TP: cpu exists,    no hotplugging-> present = possible
+	set_cpu_possible(cpu, true);  ///TP: cpu may exists
 }
 
 void __init __weak smp_setup_processor_id(void)
@@ -498,6 +498,7 @@ asmlinkage void __init start_kernel(void)
  * Interrupts are still disabled. Do necessary setups, then
  * enable them
  */
+        ///TP: set bit current_thread_info()->cpu in possible, present, active, onine cpu bit field
 	boot_cpu_init();
 	page_address_init();
 	pr_notice("%s", linux_banner);

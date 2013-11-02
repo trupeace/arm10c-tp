@@ -33,10 +33,10 @@ static int INIT nofill(void *buffer, unsigned int len)
 
 /* Included from initramfs et al code */
 STATIC int INIT gunzip(unsigned char *buf, int len,
-		       int(*fill)(void*, unsigned int),
-		       int(*flush)(void*, unsigned int),
+		       int(*fill)(void*, unsigned int), 	///TP: NULL
+		       int(*flush)(void*, unsigned int),	///TP: NULL
 		       unsigned char *out_buf,
-		       int *pos,
+		       int *pos, 	///TP: NULL
 		       void(*error)(char *x)) {
 	u8 *zbuf;
 	struct z_stream_s *strm;

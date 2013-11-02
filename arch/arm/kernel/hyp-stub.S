@@ -84,8 +84,10 @@ ENTRY(__boot_cpu_mode)
  */
 @ Call this from the primary CPU
 ENTRY(__hyp_stub_install)
+  ///TP: if ZIMAGE, do nothing
+  /// otherwise(Image), store current mode to __boot_cpu_mode (to support relocation, using L__boot_cpu_mode_offset)
 	store_primary_cpu_mode	r4, r5, r6
-ENDPROC(__hyp_stub_install)
+ENDPROC(__hyp_stub_install)   ///TP: not end here, no branch here at all
 
 	@ fall through...
 
@@ -98,6 +100,8 @@ ENTRY(__hyp_stub_install_secondary)
 	 * If the secondary has booted with a different mode, give up
 	 * immediately.
 	 */
+  ///TP: if ZIMAGE, always equal
+  /// otherwise(Image), compare primary core stored __boot_cpu_mode with secondary core' mode
 	compare_cpu_mode_with_primary	r4, r5, r6, r7
 	movne	pc, lr
 
