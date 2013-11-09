@@ -599,7 +599,7 @@ static void __init *early_alloc(unsigned long sz)
 static pte_t * __init early_pte_alloc(pmd_t *pmd, unsigned long addr, unsigned long prot)
 {
 	if (pmd_none(*pmd)) {
-		pte_t *pte = early_alloc(PTE_HWTABLE_OFF + PTE_HWTABLE_SIZE);
+		pte_t *pte = early_alloc(PTE_HWTABLE_OFF/*TP:HW page table*/ + PTE_HWTABLE_SIZE/*TP:linux page table*/);
 		__pmd_populate(pmd, __pa(pte), prot);
 	}
 	BUG_ON(pmd_bad(*pmd));
@@ -617,6 +617,8 @@ static void __init alloc_init_pte(pmd_t *pmd, unsigned long addr,
 	} while (pte++, addr += PAGE_SIZE, addr != end);
 }
 
+///TP: restriction, d$ clean for 1 cache line -> pmd section count cannot exceed 8 or 16
+//  this means end < addr + 0x100000*(8 or 16)
 static void __init __map_init_section(pmd_t *pmd, unsigned long addr,
 			unsigned long end, phys_addr_t phys,
 			const struct mem_type *type)
@@ -637,11 +639,11 @@ static void __init __map_init_section(pmd_t *pmd, unsigned long addr,
 		pmd++;
 #endif
 	do {
-		*pmd = __pmd(phys | type->prot_sect);
+		*pmd = __pmd(phys | type->prot_sect);   ///TP: *pmd=PA | mem_types[type].prot_sect, pmd=0xc0007000 for VA:0xc0000000, PA=0x40000000 => *0xc0007000 = 0x40000000 | mem_types[MT_MEMORY].prot_sect 
 		phys += SECTION_SIZE;
 	} while (pmd++, addr += SECTION_SIZE, addr != end);
 
-	flush_pmd_entry(p);
+	flush_pmd_entry(p);   ///TP: clean only 1 cache line for MVA(p)
 }
 
 static void __init alloc_init_pmd(pud_t *pud, unsigned long addr,
@@ -664,7 +666,7 @@ static void __init alloc_init_pmd(pud_t *pud, unsigned long addr,
 		 */
 		if (type->prot_sect &&
 				((addr | next | phys) & ~SECTION_MASK) == 0) {
-			__map_init_section(pmd, addr, next, phys, type);
+			__map_init_section(pmd, addr, next, phys, type);    ///TP: map by section table when 1MB aligned addr, next, phys
 		} else {
 			alloc_init_pte(pmd, addr, next,
 						__phys_to_pfn(phys), type);
@@ -765,7 +767,7 @@ static void __init create_mapping(struct map_desc *md)
 	const struct mem_type *type;
 	pgd_t *pgd;
 
-	if (md->virtual != vectors_base() && md->virtual < TASK_SIZE) {
+	if (md->virtual != vectors_base() && md->virtual < TASK_SIZE) { ///TP: physical memory in user region is not allowed. TBD, we assumed that dts has memory node such as 2GB@0x40000000
 		printk(KERN_WARNING "BUG: not creating mapping for 0x%08llx"
 		       " at 0x%08lx in user region\n",
 		       (long long)__pfn_to_phys((u64)md->pfn), md->virtual);
@@ -774,7 +776,7 @@ static void __init create_mapping(struct map_desc *md)
 
 	if ((md->type == MT_DEVICE || md->type == MT_ROM) &&
 	    md->virtual >= PAGE_OFFSET &&
-	    (md->virtual < VMALLOC_START || md->virtual >= VMALLOC_END)) {
+	    (md->virtual < VMALLOC_START || md->virtual >= VMALLOC_END)) {  ///TP: DEVICE or ROM out of vmalloc space is not allowed
 		printk(KERN_WARNING "BUG: mapping for 0x%08llx"
 		       " at 0x%08lx out of vmalloc space\n",
 		       (long long)__pfn_to_phys((u64)md->pfn), md->virtual);
@@ -787,37 +789,39 @@ static void __init create_mapping(struct map_desc *md)
 	 * Catch 36-bit addresses
 	 */
 	if (md->pfn >= 0x100000) {
-		create_36bit_mapping(md, type);
+		create_36bit_mapping(md, type);   ///TP: using supersection, 64GB(36b) address is supported
 		return;
 	}
 #endif
 
+        ///TP: set addr and length which are aligned to PAGE, to include all memory from addr to addr+length
 	addr = md->virtual & PAGE_MASK;
 	phys = __pfn_to_phys(md->pfn);
 	length = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
 
-	if (type->prot_l1 == 0 && ((addr | phys | length) & ~SECTION_MASK)) {
+	if (type->prot_l1 == 0 && ((addr | phys | length) & ~SECTION_MASK)) {     /// prot_l1=0 means this memtype is using only section, not page, which requires, va, pa, length aligned 1MB
 		printk(KERN_WARNING "BUG: map for 0x%08llx at 0x%08lx can not "
 		       "be mapped using pages, ignoring.\n",
 		       (long long)__pfn_to_phys(md->pfn), addr);
 		return;
 	}
 
-	pgd = pgd_offset_k(addr);
-	end = addr + length;
+	pgd = pgd_offset_k(addr);     ///TP:  pgd=0xc0007000 for VA:0xc0000000
+	end = addr + length;	///TP: end=0xef800000
 	do {
-		unsigned long next = pgd_addr_end(addr, end);
+		unsigned long next = pgd_addr_end(addr, end);	  ///TP: get the address of the next pgd boundary or end
 
 		alloc_init_pud(pgd, addr, next, phys, type);
 
 		phys += next - addr;
 		addr = next;
-	} while (pgd++, addr != end);
+	} while (pgd++, addr != end); ///TP: sizeof(pgd)=8, 
 }
 
 /*
  * Create the architecture specific mappings
  */
+///TP: create_mapping, and add to static vm list
 void __init iotable_init(struct map_desc *io_desc, int nr)
 {
 	struct map_desc *md;
@@ -1059,7 +1063,7 @@ void __init sanity_check_meminfo(void)
 		}
 #endif
 		if (!bank->highmem) {
-			phys_addr_t bank_end = bank->start + bank->size; ///TP: 0x6f800000 = 0x20000000 + 0x4f800000
+			phys_addr_t bank_end = bank->start + bank->size; ///TP: 0x6f800000 = 0x40000000 + 0x2f800000
 
 			if (bank_end > arm_lowmem_limit)    ///TP:initially arm_lowmem_limit=0
 				arm_lowmem_limit = bank_end;
@@ -1200,7 +1204,7 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	/*
 	 * Allocate the vector page early.
 	 */
-	vectors = early_alloc(PAGE_SIZE * 2);
+	vectors = early_alloc(PAGE_SIZE * 2);   ///TP: vectors=0xef7fe000(VA), 0x6f7fe000(PA) zero-init 8kB near end of lowmeme and add it to reserved mem
 
 	early_trap_init(vectors);
 
@@ -1316,7 +1320,7 @@ static void __init map_lowmem(void)
 		map.length = end - start;
 		map.type = MT_MEMORY;
 
-		create_mapping(&map);
+		create_mapping(&map);   ///TP: currently, no memory is allowed before kernel loaded address, e.g. kernel@0x40000000, 0x20000000 memory is not allowed
 	}
 }
 
@@ -1329,9 +1333,9 @@ void __init paging_init(const struct machine_desc *mdesc)
 	void *zero_page;
 
 	build_mem_type_table();   ///TP: depending on processor arch., adjust mem type table, for eg, smp set Shareable 
-	prepare_page_table();
-	map_lowmem();
-	dma_contiguous_remap();
+	prepare_page_table();     ///TP: clear page table except kernel image, ...
+	map_lowmem();             ///TP: map lowmem(3G-4G) using memblock.memory
+	dma_contiguous_remap();   ///TP: for ZONE_DMA(?), currently do nothing, if dtb has some boot commands such as early_init, may reserve DMA related memory and add it to static vm list
 	devicemaps_init(mdesc);
 	kmap_init();
 	tcm_init();

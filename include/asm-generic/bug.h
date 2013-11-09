@@ -81,7 +81,7 @@ extern void warn_slowpath_null(const char *file, const int line);
 	do { printk(arg); __WARN_TAINT(taint); } while (0)
 #endif
 
-#ifndef WARN_ON
+#ifndef WARN_ON     ///TP: 
 #define WARN_ON(condition) ({						\
 	int __ret_warn_on = !!(condition);				\
 	if (unlikely(__ret_warn_on))					\

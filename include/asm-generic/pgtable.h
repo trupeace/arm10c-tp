@@ -238,9 +238,10 @@ static inline int pmd_same(pmd_t pmd_a, pmd_t pmd_b)
  * vma end wraps to 0, rounded up __boundary may wrap to 0 throughout.
  */
 
+///TP: get VA for the next PGD
 #define pgd_addr_end(addr, end)						\
 ({	unsigned long __boundary = ((addr) + PGDIR_SIZE) & PGDIR_MASK;	\
-	(__boundary - 1 < (end) - 1)? __boundary: (end);		\
+	(__boundary - 1 < (end) - 1)? __boundary: (end);/*TP: prevent wrap to 0*/		\
 })
 
 #ifndef pud_addr_end

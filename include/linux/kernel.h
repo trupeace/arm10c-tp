@@ -47,7 +47,7 @@
  * arguments just once each.
  */
 #define __round_mask(x, y) ((__typeof__(x))((y)-1))
-#define round_up(x, y) ((((x)-1) | __round_mask(x, y))+1)
+#define round_up(x, y) ((((x)-1) | __round_mask(x, y))+1)     ///TP: round up (((x-1) | (step-1))+1)
 #define round_down(x, y) ((x) & ~__round_mask(x, y))
 
 #define FIELD_SIZEOF(t, f) (sizeof(((t*)0)->f))
@@ -704,6 +704,7 @@ static inline void ftrace_dump(enum ftrace_dump_mode oops_dump_mode) { }
  * This macro does strict typechecking of min/max to make sure they are of the
  * same type as val.  See the unnecessary pointer comparisons.
  */
+///TP: strictly type-checking clamp
 #define clamp(val, min, max) ({			\
 	typeof(val) __val = (val);		\
 	typeof(min) __min = (min);		\

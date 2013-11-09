@@ -110,7 +110,7 @@ phys_addr_t __init_memblock memblock_find_in_range_node(phys_addr_t start,
 		end = memblock.current_limit;
 
 	/* avoid allocating the first page */
-	start = max_t(phys_addr_t, start, PAGE_SIZE);
+	start = max_t(phys_addr_t, start, PAGE_SIZE);   ///same to max() with typecasting
 	end = max(start, end);
 
 	for_each_free_mem_range_reverse(i, nid, &this_start, &this_end, NULL) {
@@ -662,11 +662,11 @@ void __init_memblock __next_free_mem_range_rev(u64 *idx, int nid,
 					   phys_addr_t *out_end, int *out_nid)
 {
 	struct memblock_type *mem = &memblock.memory;
-	struct memblock_type *rsv = &memblock.reserved;
-	int mi = *idx & 0xffffffff;
-	int ri = *idx >> 32;
+	struct memblock_type *rsv = &memblock.reserved;   ///TP:kernel image, initrd, pagetable, dtb,  maybe dtb->reserve, dt_scan_reserve, DMA CMA 
+	int mi = *idx & 0xffffffff;   ///TP: memory idx
+	int ri = *idx >> 32;          ///TP: reserved idx
 
-	if (*idx == (u64)ULLONG_MAX) {
+	if (*idx == (u64)ULLONG_MAX) {  ///TP: initial condition, *idx==ULLONG_MAX when the 1st, and the last,  otherwise iteratively calls this with updated *idx
 		mi = mem->cnt - 1;
 		ri = rsv->cnt;
 	}
@@ -680,11 +680,16 @@ void __init_memblock __next_free_mem_range_rev(u64 *idx, int nid,
 		if (nid != MAX_NUMNODES && nid != memblock_get_region_node(m))
 			continue;
 
+                ///TP: rsv->cnt==3 -> 4 free region
+                //  free0|rsv0|free1|rsv1|free2|rsv2|free3|
+                //  0   base end   base end   base end   ULLONG_MAX
+                //
+                //  to understand, assume that dtb->reserve 0x00100000@0x60000000
 		/* scan areas before each reservation for intersection */
 		for ( ; ri >= 0; ri--) {
 			struct memblock_region *r = &rsv->regions[ri];
-			phys_addr_t r_start = ri ? r[-1].base + r[-1].size : 0;
-			phys_addr_t r_end = ri < rsv->cnt ? r->base : ULLONG_MAX;
+			phys_addr_t r_start = ri ? r[-1].base + r[-1].size : 0;   ///TP: 0 for free0
+			phys_addr_t r_end = ri < rsv->cnt ? r->base : ULLONG_MAX; ///TP: ULLONG_MAX for free_last
 
 			/* if ri advanced past mi, break out to advance mi */
 			if (r_end <= m_start)
@@ -786,7 +791,7 @@ static phys_addr_t __init memblock_alloc_base_nid(phys_addr_t size,
 	/* align @size to avoid excessive fragmentation on reserved array */
 	size = round_up(size, align);
 
-	found = memblock_find_in_range_node(0, max_addr, size, align, nid);
+	found = memblock_find_in_range_node(0, max_addr, size, align, nid);   ///found: 0x6f7fe000
 	if (found && !memblock_reserve(found, size))
 		return found;
 

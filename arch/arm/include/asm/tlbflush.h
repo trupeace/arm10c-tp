@@ -606,6 +606,8 @@ static inline void dummy_flush_tlb_a15_erratum(void)
  *	these operations.  This is typically used when we are removing
  *	PMD entries.
  */
+///TP:  flush including dsb(writing back to cache or memory), e.g. pmd creation
+//      clean: cache clean but not waiting for writing back,  e.g. pmd deletion
 static inline void flush_pmd_entry(void *pmd)
 {
 	const unsigned int __tlb_flag = __cpu_tlb_flags;
@@ -614,7 +616,7 @@ static inline void flush_pmd_entry(void *pmd)
 	tlb_l2_op(TLB_L2CLEAN_FR, "c15, c9, 1  @ L2 flush_pmd", pmd);
 
 	if (tlb_flag(TLB_WB))
-		dsb(ishst);
+		dsb(ishst);   ///TP: inner shareable domain, write access required
 }
 
 static inline void clean_pmd_entry(void *pmd)

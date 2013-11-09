@@ -35,7 +35,7 @@ struct memblock_type {
 };
 
 struct memblock {
-	phys_addr_t current_limit;
+	phys_addr_t current_limit;    ///TP: =arm_lowmem_limit=0x6f800000, set by setup_arch().sanity_check_meminfo()
 	struct memblock_type memory;
 	struct memblock_type reserved;
 };

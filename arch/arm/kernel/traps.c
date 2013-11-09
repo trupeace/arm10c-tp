@@ -37,7 +37,7 @@
 
 static const char *handler[]= { "prefetch abort", "data abort", "address exception", "interrupt" };
 
-void *vectors_page;
+void *vectors_page;   ///TP: 0xef7fe000(0xef800000-8kB) page table(2*4kB) address of vector base, set by early_trap_init() 
 
 #ifdef CONFIG_DEBUG_USER
 unsigned int user_debug;
@@ -858,7 +858,7 @@ static void __init kuser_init(void *vectors)
 void __init early_trap_init(void *vectors_base)
 {
 #ifndef CONFIG_CPU_V7M
-	unsigned long vectors = (unsigned long)vectors_base;
+	unsigned long vectors = (unsigned long)vectors_base;    ///TP: ----- not 0xffff0000(high vectors)
 	extern char __stubs_start[], __stubs_end[];
 	extern char __vectors_start[], __vectors_end[];
 	unsigned i;
@@ -871,7 +871,7 @@ void __init early_trap_init(void *vectors_base)
 	 * ISAs.  The Thumb version is an undefined instruction with a
 	 * branch back to the undefined instruction.
 	 */
-	for (i = 0; i < PAGE_SIZE / sizeof(u32); i++)
+	for (i = 0; i < PAGE_SIZE / sizeof(u32); i++)     ///TP: Q: why do this, overwritten by codes below
 		((u32 *)vectors_base)[i] = 0xe7fddef1;
 
 	/*
