@@ -100,16 +100,16 @@ EXPORT_SYMBOL(elf_hwcap);
 
 
 #ifdef MULTI_CPU
-struct processor processor __read_mostly;
+struct processor processor __read_mostly;   ///TP: v7_processor_functions, set by setup_processor(), functions defined in arch/arm/mm/proc-v7.S
 #endif
 #ifdef MULTI_TLB
-struct cpu_tlb_fns cpu_tlb __read_mostly;
+struct cpu_tlb_fns cpu_tlb __read_mostly;   ///TP: v7wbi_tlb_fns
 #endif
 #ifdef MULTI_USER
-struct cpu_user_fns cpu_user __read_mostly;
+struct cpu_user_fns cpu_user __read_mostly; ///TP: v6_user_fns
 #endif
 #ifdef MULTI_CACHE
-struct cpu_cache_fns cpu_cache __read_mostly;
+struct cpu_cache_fns cpu_cache __read_mostly;   ///TP: v7_cache_fns, define_cache_functions v7   // .type	\name\()_cache_fns  // refer to proc-v7.S, cache-v7.S, proc-macros.S 
 #endif
 #ifdef CONFIG_OUTER_CACHE
 struct outer_cache_fns outer_cache __read_mostly;
@@ -137,7 +137,7 @@ static struct stack stacks[NR_CPUS];
 char elf_platform[ELF_PLATFORM_SIZE];
 EXPORT_SYMBOL(elf_platform);
 
-static const char *cpu_name;
+static const char *cpu_name;    ///TP: pointer of "ARMv7 Processor" in proc-v7.S
 static const char *machine_name;
 static char __initdata cmd_line[COMMAND_LINE_SIZE];
 const struct machine_desc *machine_desc __initdata;

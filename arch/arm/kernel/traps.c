@@ -858,7 +858,7 @@ static void __init kuser_init(void *vectors)
 void __init early_trap_init(void *vectors_base)
 {
 #ifndef CONFIG_CPU_V7M
-	unsigned long vectors = (unsigned long)vectors_base;    ///TP: ----- not 0xffff0000(high vectors)
+	unsigned long vectors = (unsigned long)vectors_base;    ///TP: ----- not 0xffff0000(vectors_base(),high vectors)
 	extern char __stubs_start[], __stubs_end[];
 	extern char __vectors_start[], __vectors_end[];
 	unsigned i;
@@ -882,9 +882,9 @@ void __init early_trap_init(void *vectors_base)
 	memcpy((void *)vectors, __vectors_start, __vectors_end - __vectors_start);
 	memcpy((void *)vectors + 0x1000, __stubs_start, __stubs_end - __stubs_start);
 
-	kuser_init(vectors_base);
+	kuser_init(vectors_base);     ///TP: memcpy for kuser_helpers(tls, membarrier, etc. sync related, arch independent. user space callable function for efficiency
 
-	flush_icache_range(vectors, vectors + PAGE_SIZE * 2);
+	flush_icache_range(vectors, vectors + PAGE_SIZE * 2);   ///TP: mapped to v7_coherent_kern_range
 	modify_domain(DOMAIN_USER, DOMAIN_CLIENT);
 #else /* ifndef CONFIG_CPU_V7M */
 	/*

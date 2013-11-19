@@ -304,6 +304,8 @@ extern struct cpu_tlb_fns cpu_tlb;
 
 #define tlb_flag(f)	((always_tlb_flags & (f)) || (__tlb_flag & possible_tlb_flags & (f)))
 
+          ///TP:  tst __tlb_flag, f
+          //      mcrne p15, [01], pmd, c7, c10/c9, 1" 
 #define __tlb_op(f, insnarg, arg)					\
 	do {								\
 		if (always_tlb_flags & (f))				\
@@ -314,8 +316,6 @@ extern struct cpu_tlb_fns cpu_tlb;
 			    "mcrne " insnarg				\
 			    : : "r" (arg), "r" (__tlb_flag), "Ir" (f)	\
 			    : "cc");					\
-          ///TP:  tst __tlb_flag, f
-          //      mcrne p15, [01], pmd, c7, c10/c9, 1" 
 	} while (0)
 
 #define tlb_op(f, regs, arg)	__tlb_op(f, "p15, 0, %0, " regs, arg)

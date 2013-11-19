@@ -31,7 +31,7 @@ struct proc_info_list {
 	unsigned int		cpu_mask;
 	unsigned long		__cpu_mm_mmu_flags;	/* used by head.S */
 	unsigned long		__cpu_io_mmu_flags;	/* used by head.S */
-	unsigned long		__cpu_flush;		/* used by head.S */
+	unsigned long		__cpu_flush;		/* used by head.S */ ///TP: __v7_ca15mp_setup
 	const char		*arch_name;
 	const char		*elf_name;
 	unsigned int		elf_hwcap;

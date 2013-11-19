@@ -108,7 +108,7 @@ struct cpu_cache_fns {
 	void (*flush_user_all)(void);
 	void (*flush_user_range)(unsigned long, unsigned long, unsigned int);
 
-	void (*coherent_kern_range)(unsigned long, unsigned long);
+	void (*coherent_kern_range)(unsigned long, unsigned long);    ///TP: v7_coherent_kern_range
 	int  (*coherent_user_range)(unsigned long, unsigned long);
 	void (*flush_kern_dcache_area)(void *, size_t);
 
