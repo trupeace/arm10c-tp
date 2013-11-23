@@ -840,14 +840,14 @@ static void __init kuser_init(void *vectors)
 	extern char __kuser_helper_start[], __kuser_helper_end[];
 	int kuser_sz = __kuser_helper_end - __kuser_helper_start;
 
-	memcpy(vectors + 0x1000 - kuser_sz, __kuser_helper_start, kuser_sz);
+	memcpy(vectors + 0x1000 - kuser_sz, __kuser_helper_start, kuser_sz);	///TP: kuser_helpers located at 0xffff1000 backwards
 
 	/*
 	 * vectors + 0xfe0 = __kuser_get_tls
 	 * vectors + 0xfe8 = hardware TLS instruction at 0xffff0fe8
 	 */
-	if (tls_emu || has_tls_reg)
-		memcpy(vectors + 0xfe0, vectors + 0xfe8, 4);
+	if (tls_emu || has_tls_reg)	///TP: TLS,Thread Local Storage
+		memcpy(vectors + 0xfe0, vectors + 0xfe8, 4);	///TP: subsitute SW TLS with HW TLS
 }
 #else
 static void __init kuser_init(void *vectors)
@@ -858,7 +858,7 @@ static void __init kuser_init(void *vectors)
 void __init early_trap_init(void *vectors_base)
 {
 #ifndef CONFIG_CPU_V7M
-	unsigned long vectors = (unsigned long)vectors_base;    ///TP: ----- not 0xffff0000(vectors_base(),high vectors)
+	unsigned long vectors = (unsigned long)vectors_base;	///TP: parameter, not 0xffff0000(vectors_base(),high vectors)
 	extern char __stubs_start[], __stubs_end[];
 	extern char __vectors_start[], __vectors_end[];
 	unsigned i;
@@ -879,13 +879,13 @@ void __init early_trap_init(void *vectors_base)
 	 * into the vector page, mapped at 0xffff0000, and ensure these
 	 * are visible to the instruction stream.
 	 */
-	memcpy((void *)vectors, __vectors_start, __vectors_end - __vectors_start);
+	memcpy((void *)vectors, __vectors_start, __vectors_end - __vectors_start);	///TP: *.vectors section LMA != VMA, which needs manual relocation
 	memcpy((void *)vectors + 0x1000, __stubs_start, __stubs_end - __stubs_start);
 
-	kuser_init(vectors_base);     ///TP: memcpy for kuser_helpers(tls, membarrier, etc. sync related, arch independent. user space callable function for efficiency
+	kuser_init(vectors_base);	///TP: fill(memcpy)  0xffff1000 backward with kuser_helpers  (tls, membarrier, etc. sync related, arch independent. user space callable function for efficiency
 
-	flush_icache_range(vectors, vectors + PAGE_SIZE * 2);   ///TP: mapped to v7_coherent_kern_range
-	modify_domain(DOMAIN_USER, DOMAIN_CLIENT);
+	flush_icache_range(vectors, vectors + PAGE_SIZE * 2);	///TP: mapped to v7_coherent_kern_range, clean dcache & invalidate icache & BP
+	modify_domain(DOMAIN_USER, DOMAIN_CLIENT);  ///TP: now domain is (DOMAIN_IO, DOMAIN_CLIENT)|(DOMAIN_USER, DOMAIN_CLIENT)|(DOMAIN_KERNEL, DOMAIN_MANAGER)
 #else /* ifndef CONFIG_CPU_V7M */
 	/*
 	 * on V7-M there is no need to copy the vector table to a dedicated

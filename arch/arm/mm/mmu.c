@@ -1224,7 +1224,7 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 #endif
 
 	/*
-	 * Map the cache flushing regions.
+	 * Map the cache flushing regions.	///TP: architecture specific cache related region
 	 */
 #ifdef FLUSH_BASE
 	map.pfn = __phys_to_pfn(FLUSH_BASE_PHYS);
@@ -1250,11 +1250,11 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	map.virtual = 0xffff0000;
 	map.length = PAGE_SIZE;
 #ifdef CONFIG_KUSER_HELPERS
-	map.type = MT_HIGH_VECTORS;
+	map.type = MT_HIGH_VECTORS;	///TP: prot_pte has L_PTE_USER to be accessible in user mode
 #else
 	map.type = MT_LOW_VECTORS;
 #endif
-	create_mapping(&map);
+	create_mapping(&map);	///TP: mapping vectors(PA:0x6f7fe000) to VA:0xffff0000
 
 	if (!vectors_high()) {
 		map.virtual = 0;
@@ -1274,7 +1274,7 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	 * Ask the machine support to map in the statically mapped devices.
 	 */
 	if (mdesc->map_io)
-		mdesc->map_io();
+		mdesc->map_io();	///TP: mapped to exynos_init_io(), arch/arm/mach-exynos/mach-exynos5-dt.c
 	else
 		debug_ll_io_init();
 	fill_pmd_gaps();

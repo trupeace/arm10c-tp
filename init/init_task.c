@@ -22,5 +22,6 @@ EXPORT_SYMBOL(init_task);
  * Initial thread structure. Alignment of this is handled by a special
  * linker map entry.
  */
+///TP: .cpu_domain = (DOMAIN_IO, DOMAIN_CLIENT)|(DOMAIN_USER, DOMAIN_MANAGER->DOMAIN_CLIENT by early_trap_init())|(DOMAIN_KERNEL, DOMAIN_MANAGER)
 union thread_union init_thread_union __init_task_data =
 	{ INIT_THREAD_INFO(init_task) };

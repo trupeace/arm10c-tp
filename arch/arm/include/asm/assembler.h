@@ -266,12 +266,12 @@
 #if __LINUX_ARM_ARCH__ >= 6
 	mrs	\reg , cpsr
 	eor	\reg, \reg, #HYP_MODE
-	tst	\reg, #MODE_MASK
+	tst	\reg, #MODE_MASK	///TP: tst: &(bitwise AND), teq: ^(bitwise XOR)
 	bic	\reg , \reg , #MODE_MASK
 	orr	\reg , \reg , #PSR_I_BIT | PSR_F_BIT | SVC_MODE
 THUMB(	orr	\reg , \reg , #PSR_T_BIT	)
-	bne	1f
-	orr	\reg, \reg, #PSR_A_BIT
+	bne	1f	///TP: if (0!=((reg ^ #HYP_MODE) & 0x1f)) => if (current_mode != #HYP_MODE)
+	orr	\reg, \reg, #PSR_A_BIT	///TP: async abort bit
 	adr	lr, BSYM(2f)
 	msr	spsr_cxsf, \reg
 	__MSR_ELR_HYP(14)

@@ -19,8 +19,8 @@
 #include <mach/map.h>
 #include <plat/cpu.h>
 
-unsigned long samsung_cpu_id;
-static unsigned int samsung_cpu_rev;
+unsigned long samsung_cpu_id;		///TP: setby devicemaps_init().mdesc->map_io()
+static unsigned int samsung_cpu_rev;	///TP: setby devicemaps_init().mdesc->map_io()
 
 unsigned int samsung_rev(void)
 {

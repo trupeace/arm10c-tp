@@ -40,7 +40,7 @@
  *
  * This allows the kernel to flag an error when the secondaries have come up.
  */
-extern int __boot_cpu_mode;
+extern int __boot_cpu_mode;	///TP: primary boot cpu mode set by store_primary_cpu_mode()
 
 static inline void sync_boot_mode(void)
 {

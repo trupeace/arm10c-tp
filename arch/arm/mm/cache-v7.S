@@ -269,16 +269,17 @@ ENTRY(v7_coherent_kern_range)
  *	- the Icache does not read data from the write buffer
  */
 ENTRY(v7_coherent_user_range)
- UNWIND(.fnstart		)
-	dcache_line_size r2, r3
+ UNWIND(.fnstart		)	///TP: for debug, stack unwinding support
+	dcache_line_size r2, r3		///TP: r2 set to d$ line size, CA15: 64B
 	sub	r3, r2, #1
-	bic	r12, r0, r3
+	bic	r12, r0, r3	///TP: r0 & ~0x3f
 #ifdef CONFIG_ARM_ERRATA_764369
 	ALT_SMP(W(dsb))
 	ALT_UP(W(nop))
 #endif
+	///TP: r2: dcache line size, r12: aligned start address
 1:
- USER(	mcr	p15, 0, r12, c7, c11, 1	)	@ clean D line to the point of unification
+ USER(	mcr	p15, 0, r12, c7, c11, 1	)	@ clean D line to the point of unification	///TP: USER macro save address of this instruction and 9001 label into __ex_table section, this is used by fixup_exception(), which change pc to 9001 label
 	add	r12, r12, r2
 	cmp	r12, r1
 	blo	1b
@@ -286,13 +287,14 @@ ENTRY(v7_coherent_user_range)
 	icache_line_size r2, r3
 	sub	r3, r2, #1
 	bic	r12, r0, r3
+	///TP: r2: icache line size, r12: aligned start address
 2:
  USER(	mcr	p15, 0, r12, c7, c5, 1	)	@ invalidate I line
 	add	r12, r12, r2
 	cmp	r12, r1
 	blo	2b
 	mov	r0, #0
-	ALT_SMP(mcr	p15, 0, r0, c7, c1, 6)	@ invalidate BTB Inner Shareable
+	ALT_SMP(mcr	p15, 0, r0, c7, c1, 6)	@ invalidate BTB Inner Shareable	///TP: Q: why not invalidate selective BTB? maybe invalidate all is fast and performance degradation is not that bad
 	ALT_UP(mcr	p15, 0, r0, c7, c5, 6)	@ invalidate BTB
 	dsb	ishst
 	isb
@@ -302,7 +304,7 @@ ENTRY(v7_coherent_user_range)
  * Fault handling for the cache operation above. If the virtual address in r0
  * isn't mapped, fail with -EFAULT.
  */
-9001:
+9001:	///TP: if exception such as data abort occurs, exception handler change PC to here
 #ifdef CONFIG_ARM_ERRATA_775420
 	dsb
 #endif

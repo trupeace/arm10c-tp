@@ -42,7 +42,7 @@
  * area for the same reason. ;)
  */
 #define VMALLOC_OFFSET		(8*1024*1024)
-#define VMALLOC_START		(((unsigned long)high_memory + VMALLOC_OFFSET) & ~(VMALLOC_OFFSET-1))
+#define VMALLOC_START		(((unsigned long)high_memory + VMALLOC_OFFSET) & ~(VMALLOC_OFFSET-1))	///TP: 0xf0000001(VA)
 #define VMALLOC_END		0xff000000UL
 
 #define LIBRARY_TEXT_START	0x0c000000

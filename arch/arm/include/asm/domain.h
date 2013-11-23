@@ -47,10 +47,10 @@
 /*
  * Domain types
  */
-#define DOMAIN_NOACCESS	0
-#define DOMAIN_CLIENT	1
+#define DOMAIN_NOACCESS	0	///TP: Domain fault for any access
+#define DOMAIN_CLIENT	1	///TP: domain permission check by translation tables
 #ifdef CONFIG_CPU_USE_DOMAINS
-#define DOMAIN_MANAGER	3
+#define DOMAIN_MANAGER	3	///TP: access permission not checked
 #else
 #define DOMAIN_MANAGER	1
 #endif

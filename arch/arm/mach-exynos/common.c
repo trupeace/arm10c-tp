@@ -334,7 +334,7 @@ static int __init exynos_fdt_map_chipid(unsigned long node, const char *uname,
 
 void __init exynos_init_io(void)
 {
-	debug_ll_io_init();
+	debug_ll_io_init();	///TP: ifdef CONFIG_DEBUG_LL, iomap for uart address
 
 	of_scan_flat_dt(exynos_fdt_map_chipid, NULL);
 

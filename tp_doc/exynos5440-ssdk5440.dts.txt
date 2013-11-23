@@ -1,0 +1,519 @@
+/*
+ * Skeleton device tree; the bare minimum needed to boot; just include and
+ * add a compatible value.  The bootloader will typically populate the memory
+ * node.
+ */
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	chosen { };
+	aliases { };
+	memory { device_type = "memory"; reg = <0 0>; };
+};
+/*
+ * Samsung's Exynos5 SoC series common device tree source
+ *
+ * Copyright (c) 2012-2013 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * Samsung's Exynos5 SoC series device nodes are listed in this file. Particular
+ * SoCs from Exynos5 series can include this file and provide values for SoCs
+ * specfic bindings.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#include "skeleton.dtsi"
+
+/ {
+	interrupt-parent = <&gic>;
+
+	chipid@10000000 {
+		compatible = "samsung,exynos4210-chipid";
+		reg = <0x10000000 0x100>;
+	};
+
+	combiner:interrupt-controller@10440000 {
+		compatible = "samsung,exynos4210-combiner";
+		#interrupt-cells = <2>;
+		interrupt-controller;
+		samsung,combiner-nr = <32>;
+		reg = <0x10440000 0x1000>;
+		interrupts =	<0 0 0>, <0 1 0>, <0 2 0>, <0 3 0>,
+				<0 4 0>, <0 5 0>, <0 6 0>, <0 7 0>,
+				<0 8 0>, <0 9 0>, <0 10 0>, <0 11 0>,
+				<0 12 0>, <0 13 0>, <0 14 0>, <0 15 0>,
+				<0 16 0>, <0 17 0>, <0 18 0>, <0 19 0>,
+				<0 20 0>, <0 21 0>, <0 22 0>, <0 23 0>,
+				<0 24 0>, <0 25 0>, <0 26 0>, <0 27 0>,
+				<0 28 0>, <0 29 0>, <0 30 0>, <0 31 0>;
+	};
+
+	gic:interrupt-controller@10481000 {
+		compatible = "arm,cortex-a15-gic", "arm,cortex-a9-gic";
+		#interrupt-cells = <3>;
+		interrupt-controller;
+		reg =	<0x10481000 0x1000>,
+			<0x10482000 0x1000>,
+			<0x10484000 0x2000>,
+			<0x10486000 0x2000>;
+		interrupts = <1 9 0xf04>;
+	};
+
+	dwmmc_0: dwmmc0@12200000 {
+		compatible = "samsung,exynos5250-dw-mshc";
+		interrupts = <0 75 0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	dwmmc_1: dwmmc1@12210000 {
+		compatible = "samsung,exynos5250-dw-mshc";
+		interrupts = <0 76 0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	dwmmc_2: dwmmc2@12220000 {
+		compatible = "samsung,exynos5250-dw-mshc";
+		interrupts = <0 77 0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	serial@12C00000 {
+		compatible = "samsung,exynos4210-uart";
+		reg = <0x12C00000 0x100>;
+		interrupts = <0 51 0>;
+	};
+
+	serial@12C10000 {
+		compatible = "samsung,exynos4210-uart";
+		reg = <0x12C10000 0x100>;
+		interrupts = <0 52 0>;
+	};
+
+	serial@12C20000 {
+		compatible = "samsung,exynos4210-uart";
+		reg = <0x12C20000 0x100>;
+		interrupts = <0 53 0>;
+	};
+
+	serial@12C30000 {
+		compatible = "samsung,exynos4210-uart";
+		reg = <0x12C30000 0x100>;
+		interrupts = <0 54 0>;
+	};
+
+	rtc@101E0000 {
+		compatible = "samsung,s3c6410-rtc";
+		reg = <0x101E0000 0x100>;
+		interrupts = <0 43 0>, <0 44 0>;
+		status = "disabled";
+	};
+
+	watchdog {
+		compatible = "samsung,s3c2410-wdt";
+		reg = <0x101D0000 0x100>;
+		interrupts = <0 42 0>;
+		status = "disabled";
+	};
+
+	fimd@14400000 {
+		compatible = "samsung,exynos5250-fimd";
+		interrupt-parent = <&combiner>;
+		reg = <0x14400000 0x40000>;
+		interrupt-names = "fifo", "vsync", "lcd_sys";
+		interrupts = <18 4>, <18 5>, <18 6>;
+		status = "disabled";
+	};
+
+	dp-controller@145B0000 {
+		compatible = "samsung,exynos5-dp";
+		reg = <0x145B0000 0x1000>;
+		interrupts = <10 3>;
+		interrupt-parent = <&combiner>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+};
+/*
+ * SAMSUNG EXYNOS5440 SoC device tree source
+ *
+ * Copyright (c) 2012 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+#include "skeleton.dtsi"
+
+/ {
+	compatible = "samsung,exynos5440";
+
+	interrupt-parent = <&gic>;
+
+	aliases {
+		spi0 = &spi_0;
+		tmuctrl0 = &tmuctrl_0;
+		tmuctrl1 = &tmuctrl_1;
+		tmuctrl2 = &tmuctrl_2;
+	};
+
+	clock: clock-controller@160000 {
+		compatible = "samsung,exynos5440-clock";
+		reg = <0x160000 0x1000>;
+		#clock-cells = <1>;
+	};
+
+	gic:interrupt-controller@2E0000 {
+		compatible = "arm,cortex-a15-gic";
+		#interrupt-cells = <3>;
+		interrupt-controller;
+		reg =	<0x2E1000 0x1000>,
+			<0x2E2000 0x1000>,
+			<0x2E4000 0x2000>,
+			<0x2E6000 0x2000>;
+		interrupts = <1 9 0xf04>;
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a15";
+			reg = <0>;
+		};
+		cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a15";
+			reg = <1>;
+		};
+		cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a15";
+			reg = <2>;
+		};
+		cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a15";
+			reg = <3>;
+		};
+	};
+
+	arm-pmu {
+		compatible = "arm,cortex-a15-pmu", "arm,cortex-a9-pmu";
+		interrupts = <0 52 4>,
+			     <0 53 4>,
+			     <0 54 4>,
+			     <0 55 4>;
+	};
+
+	timer {
+		compatible = "arm,cortex-a15-timer",
+			     "arm,armv7-timer";
+		interrupts = <1 13 0xf08>,
+			     <1 14 0xf08>,
+			     <1 11 0xf08>,
+			     <1 10 0xf08>;
+		clock-frequency = <50000000>;
+	};
+
+	cpufreq@160000 {
+		compatible = "samsung,exynos5440-cpufreq";
+		reg = <0x160000 0x1000>;
+		interrupts = <0 57 0>;
+		operating-points = <
+				/* KHz	  uV */
+				1500000 1100000
+				1400000 1075000
+				1300000 1050000
+				1200000 1025000
+				1100000 1000000
+				1000000 975000
+				900000  950000
+				800000  925000
+		>;
+	};
+
+	serial@B0000 {
+		compatible = "samsung,exynos4210-uart";
+		reg = <0xB0000 0x1000>;
+		interrupts = <0 2 0>;
+		clocks = <&clock 21>, <&clock 21>;
+		clock-names = "uart", "clk_uart_baud0";
+	};
+
+	serial@C0000 {
+		compatible = "samsung,exynos4210-uart";
+		reg = <0xC0000 0x1000>;
+		interrupts = <0 3 0>;
+		clocks = <&clock 21>, <&clock 21>;
+		clock-names = "uart", "clk_uart_baud0";
+	};
+
+	spi_0: spi@D0000 {
+		compatible = "samsung,exynos5440-spi";
+		reg = <0xD0000 0x100>;
+		interrupts = <0 4 0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		samsung,spi-src-clk = <0>;
+		num-cs = <1>;
+		clocks = <&clock 21>, <&clock 16>;
+		clock-names = "spi", "spi_busclk0";
+	};
+
+	pin_ctrl: pinctrl {
+		compatible = "samsung,exynos5440-pinctrl";
+		reg = <0xE0000 0x1000>;
+		interrupts = <0 37 0>, <0 38 0>, <0 39 0>, <0 40 0>,
+			     <0 41 0>, <0 42 0>, <0 43 0>, <0 44 0>;
+		interrupt-controller;
+		#interrupt-cells = <2>;
+		#gpio-cells = <2>;
+
+		fan: fan {
+			samsung,exynos5440-pin-function = <1>;
+		};
+
+		hdd_led0: hdd_led0 {
+			samsung,exynos5440-pin-function = <2>;
+		};
+
+		hdd_led1: hdd_led1 {
+			samsung,exynos5440-pin-function = <3>;
+		};
+
+		uart1: uart1 {
+			samsung,exynos5440-pin-function = <4>;
+		};
+	};
+
+	i2c@F0000 {
+		compatible = "samsung,exynos5440-i2c";
+		reg = <0xF0000 0x1000>;
+		interrupts = <0 5 0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clock 21>;
+		clock-names = "i2c";
+	};
+
+	i2c@100000 {
+		compatible = "samsung,exynos5440-i2c";
+		reg = <0x100000 0x1000>;
+		interrupts = <0 6 0>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&clock 21>;
+		clock-names = "i2c";
+	};
+
+	watchdog {
+		compatible = "samsung,s3c2410-wdt";
+		reg = <0x110000 0x1000>;
+		interrupts = <0 1 0>;
+		clocks = <&clock 21>;
+		clock-names = "watchdog";
+	};
+
+	gmac: ethernet@00230000 {
+		compatible = "snps,dwmac-3.70a";
+		reg = <0x00230000 0x8000>;
+		interrupt-parent = <&gic>;
+		interrupts = <0 31 4>;
+		interrupt-names = "macirq";
+		phy-mode = "sgmii";
+		clocks = <&clock 25>;
+		clock-names = "stmmaceth";
+	};
+
+	amba {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "arm,amba-bus";
+		interrupt-parent = <&gic>;
+		ranges;
+	};
+
+	rtc {
+		compatible = "samsung,s3c6410-rtc";
+		reg = <0x130000 0x1000>;
+		interrupts = <0 17 0>, <0 16 0>;
+		clocks = <&clock 21>;
+		clock-names = "rtc";
+	};
+
+	tmuctrl_0: tmuctrl@160118 {
+		compatible = "samsung,exynos5440-tmu";
+		reg = <0x160118 0x230>, <0x160368 0x10>;
+		interrupts = <0 58 0>;
+		clocks = <&clock 21>;
+		clock-names = "tmu_apbif";
+	};
+
+	tmuctrl_1: tmuctrl@16011C {
+		compatible = "samsung,exynos5440-tmu";
+		reg = <0x16011C 0x230>, <0x160368 0x10>;
+		interrupts = <0 58 0>;
+		clocks = <&clock 21>;
+		clock-names = "tmu_apbif";
+	};
+
+	tmuctrl_2: tmuctrl@160120 {
+		compatible = "samsung,exynos5440-tmu";
+		reg = <0x160120 0x230>, <0x160368 0x10>;
+		interrupts = <0 58 0>;
+		clocks = <&clock 21>;
+		clock-names = "tmu_apbif";
+	};
+
+	sata@210000 {
+		compatible = "snps,exynos5440-ahci";
+		reg = <0x210000 0x10000>;
+		interrupts = <0 30 0>;
+		clocks = <&clock 23>;
+		clock-names = "sata";
+	};
+
+	ohci@220000 {
+		compatible = "samsung,exynos5440-ohci";
+		reg = <0x220000 0x1000>;
+		interrupts = <0 29 0>;
+		clocks = <&clock 24>;
+		clock-names = "usbhost";
+	};
+
+	ehci@221000 {
+		compatible = "samsung,exynos5440-ehci";
+		reg = <0x221000 0x1000>;
+		interrupts = <0 29 0>;
+		clocks = <&clock 24>;
+		clock-names = "usbhost";
+	};
+
+	pcie@290000 {
+		compatible = "samsung,exynos5440-pcie", "snps,dw-pcie";
+		reg = <0x290000 0x1000
+			0x270000 0x1000
+			0x271000 0x40>;
+		interrupts = <0 20 0>, <0 21 0>, <0 22 0>;
+		clocks = <&clock 28>, <&clock 27>;
+		clock-names = "pcie", "pcie_bus";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		ranges = <0x00000800 0 0x40000000 0x40000000 0 0x00001000   /* configuration space */
+			  0x81000000 0 0	  0x40001000 0 0x00010000   /* downstream I/O */
+			  0x82000000 0 0x40011000 0x40011000 0 0x1ffef000>; /* non-prefetchable memory */
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0x0 0 &gic 53>;
+		num-lanes = <4>;
+	};
+
+	pcie@2a0000 {
+		compatible = "samsung,exynos5440-pcie", "snps,dw-pcie";
+		reg = <0x2a0000 0x1000
+			0x272000 0x1000
+			0x271040 0x40>;
+		interrupts = <0 23 0>, <0 24 0>, <0 25 0>;
+		clocks = <&clock 29>, <&clock 27>;
+		clock-names = "pcie", "pcie_bus";
+		#address-cells = <3>;
+		#size-cells = <2>;
+		device_type = "pci";
+		ranges = <0x00000800 0 0x60000000 0x60000000 0 0x00001000   /* configuration space */
+			  0x81000000 0 0	  0x60001000 0 0x00010000   /* downstream I/O */
+			  0x82000000 0 0x60011000 0x60011000 0 0x1ffef000>; /* non-prefetchable memory */
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0x0 0 &gic 56>;
+		num-lanes = <4>;
+	};
+};
+/*
+ * SAMSUNG SSDK5440 board device tree source
+ *
+ * Copyright (c) 2012 Samsung Electronics Co., Ltd.
+ *		http://www.samsung.com
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+*/
+
+/dts-v1/;
+#include "exynos5440.dtsi"
+
+/ {
+	model = "SAMSUNG SSDK5440 board based on EXYNOS5440";
+	compatible = "samsung,ssdk5440", "samsung,exynos5440";
+
+	chosen {
+		bootargs = "root=/dev/sda2 rw rootwait ignore_loglevel early_printk no_console_suspend mem=2048M@0x80000000 mem=6144M@0x100000000 console=ttySAC0,115200";
+	};
+
+	spi_0: spi@D0000 {
+
+		flash: w25q128@0 {
+			#address-cells = <1>;
+			#size-cells = <1>;
+			compatible = "winbond,w25q128";
+			spi-max-frequency = <15625000>;
+			reg = <0>;
+			controller-data {
+				samsung,spi-feedback-delay = <0>;
+			};
+
+			partition@00000 {
+				label = "BootLoader";
+				reg = <0x60000 0x80000>;
+				read-only;
+			};
+
+			partition@e0000 {
+				label = "Recovery-Kernel";
+				reg = <0xe0000 0x300000>;
+				read-only;
+			};
+
+			partition@3e0000 {
+				label = "CRAM-FS";
+				reg = <0x3e0000 0x700000>;
+				read-only;
+			};
+
+			partition@ae0000 {
+				label = "User-Data";
+				reg = <0xae0000 0x520000>;
+			};
+
+		};
+
+	};
+
+	fixed-rate-clocks {
+		xtal {
+			compatible = "samsung,clock-xtal";
+			clock-frequency = <50000000>;
+		};
+	};
+
+	pcie@290000 {
+		reset-gpio = <&pin_ctrl 5 0>;
+	};
+
+	pcie@2a0000 {
+		reset-gpio = <&pin_ctrl 22 0>;
+	};
+};

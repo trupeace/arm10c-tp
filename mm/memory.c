@@ -89,7 +89,7 @@ EXPORT_SYMBOL(mem_map);
  * highstart_pfn must be the same; there must be no gap between ZONE_NORMAL
  * and ZONE_HIGHMEM.
  */
-void * high_memory;
+void * high_memory;	///TP: __va(arm_lowmem_limit)=0xef800000, set by sanity_check_meminfo()
 
 EXPORT_SYMBOL(high_memory);
 
