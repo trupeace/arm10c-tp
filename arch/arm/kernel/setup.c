@@ -860,6 +860,7 @@ void __init setup_arch(char **cmdline_p)
 
 	setup_processor();
 	mdesc = setup_machine_fdt(__atags_pointer);   ///TP: setup model, boot_command_line(bootargs in dtb), memory
+  ///TP: now mdesc = best matched machine_desc * in .arch.info.init section, refer to arch/arm/mach-exynos/mach-exynos5-dt.c
 	if (!mdesc)
 		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);
 	machine_desc = mdesc;

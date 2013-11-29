@@ -59,7 +59,7 @@ typedef pteval_t pgprot_t;
 #define pgprot_val(x)   (x)
 
 #define __pte(x)        (x)
-#define __pmd(x)        (x)
+#define __pmd(x)        (x)	///TP: typecasting to handle both case (struct typed variable, direct variable)
 #define __pgprot(x)     (x)
 
 #endif /* STRICT_MM_TYPECHECKS */

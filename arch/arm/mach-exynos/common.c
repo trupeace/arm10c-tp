@@ -227,37 +227,37 @@ static struct map_desc exynos5250_iodesc[] __initdata = {
 
 static struct map_desc exynos5_iodesc[] __initdata = {
 	{
-		.virtual	= (unsigned long)S3C_VA_SYS,
+		.virtual	= (unsigned long)S3C_VA_SYS,		///TP: 0xf6100000
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_SYSCON),
 		.length		= SZ_64K,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S3C_VA_TIMER,
+		.virtual	= (unsigned long)S3C_VA_TIMER,		///TP: 0xf6300000
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_TIMER),
 		.length		= SZ_16K,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S3C_VA_WATCHDOG,
+		.virtual	= (unsigned long)S3C_VA_WATCHDOG,	///TP: 0xf6400000
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_WATCHDOG),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S5P_VA_SROMC,
+		.virtual	= (unsigned long)S5P_VA_SROMC,		///TP: 0xf84C0000
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_SROMC),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S5P_VA_SYSRAM,
+		.virtual	= (unsigned long)S5P_VA_SYSRAM,		///TP: 0xf8400000
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_SYSRAM),
 		.length		= SZ_4K,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S5P_VA_CMU,
+		.virtual	= (unsigned long)S5P_VA_CMU,		///TP: 0xf8100000
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_CMU),
 		.length		= 144 * SZ_1K,
 		.type		= MT_DEVICE,
 	}, {
-		.virtual	= (unsigned long)S5P_VA_PMU,
+		.virtual	= (unsigned long)S5P_VA_PMU,		///TP: 0xf8180000
 		.pfn		= __phys_to_pfn(EXYNOS5_PA_PMU),
 		.length		= SZ_64K,
 		.type		= MT_DEVICE,
@@ -318,11 +318,11 @@ static int __init exynos_fdt_map_chipid(unsigned long node, const char *uname,
 	if (reg == NULL || len != (sizeof(unsigned long) * 2))
 		return 0;
 
-	iodesc.pfn = __phys_to_pfn(be32_to_cpu(reg[0]));
-	iodesc.length = be32_to_cpu(reg[1]) - 1;
-	iodesc.virtual = (unsigned long)S5P_VA_CHIPID;
+	iodesc.pfn = __phys_to_pfn(be32_to_cpu(reg[0]));	///TP: for exynos5420, pfn=0x10000=0x10000000>>12
+	iodesc.length = be32_to_cpu(reg[1]) - 1;		///TP: for exynos5420, length=0x100-1, Q: why -1? it seems to be error. but it is okay since size is adjusted to page aligned
+	iodesc.virtual = (unsigned long)S5P_VA_CHIPID;		///TP: va=0xf8000000 = 0xF6000000+0x02000000
 	iodesc.type = MT_DEVICE;
-	iotable_init(&iodesc, 1);
+	iotable_init(&iodesc, 1);	///TP; alloc static_vm, related 2nd pte, and insert svm to vmlist, static_vmlist
 	return 1;
 }
 
@@ -336,12 +336,16 @@ void __init exynos_init_io(void)
 {
 	debug_ll_io_init();	///TP: ifdef CONFIG_DEBUG_LL, iomap for uart address
 
-	of_scan_flat_dt(exynos_fdt_map_chipid, NULL);
+	of_scan_flat_dt(exynos_fdt_map_chipid, NULL);   ///TP: CHIPID: 0xf8000000+4kB(<-0x100)
 
 	/* detect cpu id and rev. */
 	s5p_init_cpu(S5P_VA_CHIPID);
 
 	s3c_init_cpu(samsung_cpu_id, cpu_ids, ARRAY_SIZE(cpu_ids));
+	///TP: alloc static_vm and 2nd pte, insert svm to vmlist, static_vmlist
+        /// now vmlist and static_vmlist have
+        /// SYSC:0xf6100000+64kB  TMR :0xf6300000+16kB WDT :0xf6400000+ 4kB CHID:0xf8000000+ 4kB
+        /// CMU :0xf8100000+144kB PMU :0xf8180000+64kB SRAM:0xf8400000+ 4kB ROMC:0xf84c0000+ 4kB
 }
 
 static void __init exynos4_map_io(void)
@@ -362,6 +366,13 @@ static void __init exynos4_map_io(void)
 static void __init exynos5_map_io(void)
 {
 	iotable_init(exynos5_iodesc, ARRAY_SIZE(exynos5_iodesc));
+	///TP: SYSC:0xf6100000+64kB
+	///TP: TMR :0xf6300000+16kB
+	///TP: WDT :0xf6400000+ 4kB
+	///TP: ROMC:0xf84c0000+ 4kB
+	///TP: SRAM:0xf8400000+ 4kB
+	///TP: CMU :0xf8100000+144kB
+	///TP: PMU :0xf8180000+64kB
 
 	if (soc_is_exynos5250())
 		iotable_init(exynos5250_iodesc, ARRAY_SIZE(exynos5250_iodesc));

@@ -46,7 +46,7 @@ static struct cpu_table * __init s3c_lookup_cpu(unsigned long idcode,
 void __init s3c_init_cpu(unsigned long idcode,
 			 struct cpu_table *cputab, unsigned int cputab_size)
 {
-	cpu = s3c_lookup_cpu(idcode, cputab, cputab_size);
+	cpu = s3c_lookup_cpu(idcode, cputab, cputab_size);	///TP: cpu = &cpu_ids[4]
 
 	if (cpu == NULL) {
 		printk(KERN_ERR "Unknown CPU type 0x%08lx\n", idcode);
@@ -61,7 +61,7 @@ void __init s3c_init_cpu(unsigned long idcode,
 	}
 
 	if (cpu->map_io)
-		cpu->map_io();	///TP: exynos5_map_io(), initial mapping for timer, sysram, ...
+		cpu->map_io();	///TP: exynos5_map_io(), iotable_init for tmr,wdt,sysram,pmu,...
 }
 
 /* s3c24xx_init_clocks

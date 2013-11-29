@@ -1108,7 +1108,7 @@ void *vm_map_ram(struct page **pages, unsigned int count, int node, pgprot_t pro
 }
 EXPORT_SYMBOL(vm_map_ram);
 
-static struct vm_struct *vmlist __initdata;
+static struct vm_struct *vmlist __initdata;	///TP: sorted vmap list in ascending order, chipid reg is added by exynos_fdt_map_chipid()
 /**
  * vm_area_add_early - add vmap area early during boot
  * @vm: vm_struct to add
@@ -1131,7 +1131,7 @@ void __init vm_area_add_early(struct vm_struct *vm)
 		} else
 			BUG_ON(tmp->addr + tmp->size > vm->addr);
 	}
-	vm->next = *p;
+	vm->next = *p;	///TP: insert current vm into sorted vmlist in ascending order
 	*p = vm;
 }
 

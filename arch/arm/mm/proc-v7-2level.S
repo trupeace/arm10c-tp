@@ -72,32 +72,47 @@ ENDPROC(cpu_v7_switch_mm)
  *	- pte   - PTE value to store
  *	- ext	- value for extended PTE bits
  */
+///TP: Linux Page table format
+///-----------------------------------------------
+///|31     12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+///|PA[31:12]| N| S|XN| U| R| D|   MEMF    | Y|PV|
+///-----------------------------------------------
+/// N: NONE, S: SHARED, XN: XN, U: USER, R:RDONLY, D: DIRTY, 
+/// MEMF: mem type or file(if !present), Y: YOUNG, P: PRESENT, V: VALID
+///
+///TP: HW Page table(2nd) format
+///-----------------------------------------------
+///|31     12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+///|PA[31:12]|nG| S|AP|TEX[2:0]| AP10| C| B| 1|XN|
+///-----------------------------------------------
+/// nG: not Global, S: Shareable, AP: APX/AP[2], AP10: AP[1:0], TEX,C,B: memory type 
+
 ENTRY(cpu_v7_set_pte_ext)
 #ifdef CONFIG_MMU
 	str	r1, [r0]			@ linux version
 
-	bic	r3, r1, #0x000003f0
-	bic	r3, r3, #PTE_TYPE_MASK
+	bic	r3, r1, #0x000003f0		///TP: clear AP[2:0], TEX[2:0], TEX[2:1] is managed by OS(linux seems not to use it) when SCTLR.TRE=1
+	bic	r3, r3, #PTE_TYPE_MASK		///TP: lsb[1:0]
 	orr	r3, r3, r2
-	orr	r3, r3, #PTE_EXT_AP0 | 2
+	orr	r3, r3, #PTE_EXT_AP0 | 2	///TP: small page table
 
 	tst	r1, #1 << 4
-	orrne	r3, r3, #PTE_EXT_TEX(1)
+	orrne	r3, r3, #PTE_EXT_TEX(1)		///TP: MEM[1:0]=CB[1:0], MEM[2]=TEX[1], ref to the comment below PRRR,NMRR, remember SCTLR.TRE=1
 
 	eor	r1, r1, #L_PTE_DIRTY
 	tst	r1, #L_PTE_RDONLY | L_PTE_DIRTY
-	orrne	r3, r3, #PTE_EXT_APX
+	orrne	r3, r3, #PTE_EXT_APX		///TP: if RDONLY or not DIRTY, set read-only access permission, this needs APX=1 when SCTLR.AFE=0
 
 	tst	r1, #L_PTE_USER
-	orrne	r3, r3, #PTE_EXT_AP1
+	orrne	r3, r3, #PTE_EXT_AP1		///TP: PL0 accessible only for AP[1:0]=2 or 3
 #ifdef CONFIG_CPU_USE_DOMAINS
 	@ allow kernel read/write access to read-only user pages
 	tstne	r3, #PTE_EXT_APX
-	bicne	r3, r3, #PTE_EXT_APX | PTE_EXT_AP0
+	bicne	r3, r3, #PTE_EXT_APX | PTE_EXT_AP0	///TP: if USER && APX, AP=3'b010
 #endif
 
 	tst	r1, #L_PTE_XN
-	orrne	r3, r3, #PTE_EXT_XN
+	orrne	r3, r3, #PTE_EXT_XN	///TP: deal with differently located XN, same meaning in linux pt, HW pt
 
 	tst	r1, #L_PTE_YOUNG
 	tstne	r1, #L_PTE_VALID
@@ -105,7 +120,7 @@ ENTRY(cpu_v7_set_pte_ext)
 	eorne	r1, r1, #L_PTE_NONE
 	tstne	r1, #L_PTE_NONE
 #endif
-	moveq	r3, #0
+	moveq	r3, #0		///TP: if !YOUNG or (YOUNG && !VALID)  or if !YOUNG or (YOUNG && !VALID) or (YOUNG && VALID && NONE), it is falut page
 
  ARM(	str	r3, [r0, #2048]! )
  THUMB(	add	r0, r0, #2048 )
@@ -125,14 +140,14 @@ ENDPROC(cpu_v7_set_pte_ext)
 	 *   OR = NMRR[2n+17:2n+16]	- outer cacheable property
 	 *
 	 *			n	TR	IR	OR
-	 *   UNCACHED		000	00
-	 *   BUFFERABLE		001	10	00	00
-	 *   WRITETHROUGH	010	10	10	10
-	 *   WRITEBACK		011	10	11	11
+	 *   UNCACHED		000	00                  ///TP: strongly ordered(TR)
+	 *   BUFFERABLE		001	10	00	00  ///TP: normal(TR), nc(IR)
+	 *   WRITETHROUGH	010	10	10	10  ///TP: normal, wtnwa
+	 *   WRITEBACK		011	10	11	11  ///TP: normal, wbnwa
 	 *   reserved		110
-	 *   WRITEALLOC		111	10	01	01
-	 *   DEV_SHARED		100	01
-	 *   DEV_NONSHARED	100	01
+	 *   WRITEALLOC		111	10	01	01  ///TP: normal, wbwa
+	 *   DEV_SHARED		100	01                  ///TP: device(TR)
+	 *   DEV_NONSHARED	100	01                  ///TP: device
 	 *   DEV_WC		001	10
 	 *   DEV_CACHED		011	10
 	 *
@@ -144,7 +159,7 @@ ENDPROC(cpu_v7_set_pte_ext)
 	 *   NS1 = PRRR[19] = 1		- normal shareable property
 	 *   NOS = PRRR[24+n] = 1	- not outer shareable
 	 */
-.equ	PRRR,	0xff0a81a8
+.equ	PRRR,	0xff0a81a8	///TP: PRRR, NMRR are well defined to match to linux page table memory type
 .equ	NMRR,	0x40e040e0
 
 	/*

@@ -19,8 +19,8 @@
 #include <mach/map.h>
 #include <plat/cpu.h>
 
-unsigned long samsung_cpu_id;		///TP: setby devicemaps_init().mdesc->map_io()
-static unsigned int samsung_cpu_rev;	///TP: setby devicemaps_init().mdesc->map_io()
+unsigned long samsung_cpu_id;		///TP: read(0x10000000) setby devicemaps_init().mdesc->map_io()
+static unsigned int samsung_cpu_rev;	///TP: read(0x10000000) [7:4]MainRev, [3:0]SubRev setby devicemaps_init().mdesc->map_io()
 
 unsigned int samsung_rev(void)
 {
@@ -53,5 +53,5 @@ void __init s3c64xx_init_cpu(void)
 void __init s5p_init_cpu(void __iomem *cpuid_addr)
 {
 	samsung_cpu_id = __raw_readl(cpuid_addr);
-	samsung_cpu_rev = samsung_cpu_id & 0xFF;
+	samsung_cpu_rev = samsung_cpu_id & 0xFF;	///TP: [7:4]MainRev, [3:0]SubRev
 }

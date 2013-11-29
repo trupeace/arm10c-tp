@@ -97,7 +97,7 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	: "cc");
 
         ///TP: slock = [next,owner]
-        // next is local which diff. tasks have its own next id 
+        /// next is local which diff. tasks have its own next id 
 	while (lockval.tickets.next != lockval.tickets.owner) {
 		wfe();
 		lockval.tickets.owner = ACCESS_ONCE(lock->tickets.owner);
@@ -112,12 +112,12 @@ static inline int arch_spin_trylock(arch_spinlock_t *lock)
 	unsigned long contended, res;
 	u32 slock;
 
-        ///TP: owner is lsb
+	///TP: owner is lsb
 	do {
 		__asm__ __volatile__(
 		"	ldrex	%0, [%3]\n"
 		"	mov	%2, #0\n"
-		"	subs	%1, %0, %0, ror #16\n"      ///TP if (next == owner)
+		"	subs	%1, %0, %0, ror #16\n"      ///TP: if (next == owner)
 		"	addeq	%0, %0, %4\n"
 		"	strexeq	%2, %0, [%3]"
 		: "=&r" (slock), "=&r" (contended), "=&r" (res)

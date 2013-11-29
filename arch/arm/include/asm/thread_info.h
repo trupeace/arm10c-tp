@@ -64,7 +64,7 @@ struct thread_info {
 	struct task_struct	*task;		/* main task structure */
 	struct exec_domain	*exec_domain;	/* execution domain */
 	__u32			cpu;		/* cpu */
-	__u32			cpu_domain;	/* cpu domain */
+	__u32			cpu_domain;	/* cpu domain */	///TP: init_thread's domain is (DOMAIN_IO, DOMAIN_CLIENT)|(DOMAIN_USER, DOMAIN_CLIENT)|(DOMAIN_KERNEL, DOMAIN_MANAGER)
 	struct cpu_context_save	cpu_context;	/* cpu context */
 	__u32			syscall;	/* syscall number */
 	__u8			used_cp[16];	/* thread used copro */

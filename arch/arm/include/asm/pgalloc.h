@@ -129,7 +129,7 @@ static inline void pte_free(struct mm_struct *mm, pgtable_t pte)
 static inline void __pmd_populate(pmd_t *pmdp, phys_addr_t pte,
 				  pmdval_t prot)
 {
-	pmdval_t pmdval = (pte + PTE_HWTABLE_OFF) | prot;
+	pmdval_t pmdval = (pte + PTE_HWTABLE_OFF) | prot;	///TP: HW table offset is 2048B (linux page table is prior to HW table
 	pmdp[0] = __pmd(pmdval);
 #ifndef CONFIG_ARM_LPAE
 	pmdp[1] = __pmd(pmdval + 256 * sizeof(pte_t));

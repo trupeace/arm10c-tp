@@ -69,8 +69,8 @@ extern void __flush_dcache_page(struct address_space *mapping, struct page *page
 
 
 struct static_vm {
-	struct vm_struct vm;
-	struct list_head list;
+	struct vm_struct vm;	///TP: 32B
+	struct list_head list;	///TP:  8B
 };
 
 extern struct list_head static_vmlist;

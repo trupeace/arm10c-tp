@@ -412,6 +412,22 @@ __v7_setup:
  THUMB(	orr	r0, r0, #1 << 30	)	@ Thumb exceptions
 	mov	pc, lr				@ return to head.S:__ret    ///TP: lr=__enable_mmu
 ENDPROC(__v7_setup)
+///TP: v7_crval(SCTLR) calculation
+/// cr = (reserved_mask & reserved_value) |  (~reserved_mask & (value & ~CR_clear & CR_mmuset)
+///    = (reserved_mask & reserved_value) | ((~reserved_mask & value) & (~reserved_mask & ~CR_clear & CR_mmuset))
+///      using ((~reserved_mask & value) = 0) since value=reserved_value) 
+///    = (reserved_mask & reserved_value) | (~reserved_mask & ~CR_clear & CR_mmuset)
+///       위의 reserved_mask, reserved_value, clear, mmuset을 대입하면
+///    = (0x8de7c3f8 & 0x00c50078) | (~0x8de7c3f8 & (~0x2120c702 & 0x10c0387d))
+///  -------------------------------------------------------
+///                   |       0x72183c07(=~0x8de7c3f8)
+///    0x8de7c3f8     |       0xdedf38fd(=~0x2120c702)
+///  & 0x00c50078     |     & 0x10c0387d
+///  ------------     |     ------------
+///    0x00c50078     |       0x10003805
+///  -------------------------------------------------------
+///    = (0x00c50078 | 0x10003805)
+///    = 0x10c5387d
 
 	.align	2
 __v7_setup_stack:

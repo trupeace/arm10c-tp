@@ -276,13 +276,13 @@ static struct mem_type mem_types[] = {
 	[MT_LOW_VECTORS] = {
 		.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY |
 				L_PTE_RDONLY,
-		.prot_l1   = PMD_TYPE_TABLE,
+		.prot_l1   = PMD_TYPE_TABLE,	///TP: no section entry for exception vector type
 		.domain    = DOMAIN_USER,
 	},
 	[MT_HIGH_VECTORS] = {
 		.prot_pte  = L_PTE_PRESENT | L_PTE_YOUNG | L_PTE_DIRTY |
 				L_PTE_USER | L_PTE_RDONLY,
-		.prot_l1   = PMD_TYPE_TABLE,
+		.prot_l1   = PMD_TYPE_TABLE,	///TP: no section entry for high vector type memory
 		.domain    = DOMAIN_USER,
 	},
 	[MT_MEMORY] = {
@@ -341,7 +341,7 @@ EXPORT_SYMBOL(get_mem_type);
 static void __init build_mem_type_table(void)
 {
 	struct cachepolicy *cp;
-	unsigned int cr = get_cr();   ///TP:SCTLR, cr=0x10c5387d
+	unsigned int cr = get_cr();	///TP:SCTLR, cr=0x10c5387d
 	pteval_t user_pgprot, kern_pgprot, vecs_pgprot;
 	pteval_t hyp_device_pgprot, s2_pgprot, s2_device_pgprot;
 	int cpu_arch = cpu_architecture();      ///TP:CPU_ARCH_ARMv7
@@ -586,7 +586,7 @@ EXPORT_SYMBOL(phys_mem_access_prot);
 
 static void __init *early_alloc_aligned(unsigned long sz, unsigned long align)
 {
-	void *ptr = __va(memblock_alloc(sz, align));
+	void *ptr = __va(memblock_alloc(sz, align));	///alloc memory from end of memory
 	memset(ptr, 0, sz);
 	return ptr;
 }
@@ -598,11 +598,11 @@ static void __init *early_alloc(unsigned long sz)
 
 static pte_t * __init early_pte_alloc(pmd_t *pmd, unsigned long addr, unsigned long prot)
 {
-	if (pmd_none(*pmd)) {
-		pte_t *pte = early_alloc(PTE_HWTABLE_OFF/*TP:HW page table*/ + PTE_HWTABLE_SIZE/*TP:linux page table*/);
-		__pmd_populate(pmd, __pa(pte), prot);
+	if (pmd_none(*pmd)) {	///TP: null means page table not yet assigned 
+		pte_t *pte = early_alloc(PTE_HWTABLE_OFF/*TP:HW page table*/ + PTE_HWTABLE_SIZE/*TP:linux page table*/);	///TP: for 2MB section, 4kB=2x256x4B,512entries @0x6f7fd000
+		__pmd_populate(pmd, __pa(pte), prot);	///TP: save 2nd page table to pmd
 	}
-	BUG_ON(pmd_bad(*pmd));
+	BUG_ON(pmd_bad(*pmd));	///TP: check if pmd is not section entry
 	return pte_offset_kernel(pmd, addr);
 }
 
@@ -610,9 +610,9 @@ static void __init alloc_init_pte(pmd_t *pmd, unsigned long addr,
 				  unsigned long end, unsigned long pfn,
 				  const struct mem_type *type)
 {
-	pte_t *pte = early_pte_alloc(pmd, addr, type->prot_l1);
+	pte_t *pte = early_pte_alloc(pmd, addr, type->prot_l1);	///TP: check pmd is section entry and return pte(2nd table) entry addr
 	do {
-		set_pte_ext(pte, pfn_pte(pfn, __pgprot(type->prot_pte)), 0);
+		set_pte_ext(pte, pfn_pte(pfn, __pgprot(type->prot_pte)), 0);	///TP: mapped to cpu_v7_set_pte_ext, set linux pt & HW pt entries
 		pfn++;
 	} while (pte++, addr += PAGE_SIZE, addr != end);
 }
@@ -650,7 +650,7 @@ static void __init alloc_init_pmd(pud_t *pud, unsigned long addr,
 				      unsigned long end, phys_addr_t phys,
 				      const struct mem_type *type)
 {
-	pmd_t *pmd = pmd_offset(pud, addr);
+	pmd_t *pmd = pmd_offset(pud, addr);	///TP: do nothing for 2lvl page table
 	unsigned long next;
 
 	do {
@@ -658,7 +658,7 @@ static void __init alloc_init_pmd(pud_t *pud, unsigned long addr,
 		 * With LPAE, we must loop over to map
 		 * all the pmds for the given range.
 		 */
-		next = pmd_addr_end(addr, end);
+		next = pmd_addr_end(addr, end);		///TP: min(addr+2MB, end)
 
 		/*
 		 * Try a section mapping - addr, next and phys must all be
@@ -669,7 +669,7 @@ static void __init alloc_init_pmd(pud_t *pud, unsigned long addr,
 			__map_init_section(pmd, addr, next, phys, type);    ///TP: map by section table when 1MB aligned addr, next, phys
 		} else {
 			alloc_init_pte(pmd, addr, next,
-						__phys_to_pfn(phys), type);
+						__phys_to_pfn(phys), type);   ///TP: 4kB page table mapping
 		}
 
 		phys += next - addr;
@@ -681,11 +681,11 @@ static void __init alloc_init_pud(pgd_t *pgd, unsigned long addr,
 				  unsigned long end, phys_addr_t phys,
 				  const struct mem_type *type)
 {
-	pud_t *pud = pud_offset(pgd, addr);
+	pud_t *pud = pud_offset(pgd, addr);	///TP: pud_offsets do nothing
 	unsigned long next;
 
 	do {
-		next = pud_addr_end(addr, end);
+		next = pud_addr_end(addr, end);	///TP: min(addr+2MB, end)
 		alloc_init_pmd(pud, addr, next, phys, type);
 		phys += next - addr;
 	} while (pud++, addr = next, addr != end);
@@ -767,7 +767,7 @@ static void __init create_mapping(struct map_desc *md)
 	const struct mem_type *type;
 	pgd_t *pgd;
 
-	if (md->virtual != vectors_base() && md->virtual < TASK_SIZE) { ///TP: physical memory in user region is not allowed. TBD, we assumed that dts has memory node such as 2GB@0x40000000
+	if (md->virtual != vectors_base() && md->virtual < TASK_SIZE) { ///TP: physical memory in user region is not allowed. TBD, we assumed that dts has memory node such as 2GB@0x20000000
 		printk(KERN_WARNING "BUG: not creating mapping for 0x%08llx"
 		       " at 0x%08lx in user region\n",
 		       (long long)__pfn_to_phys((u64)md->pfn), md->virtual);
@@ -796,7 +796,7 @@ static void __init create_mapping(struct map_desc *md)
 
         ///TP: set addr and length which are aligned to PAGE, to include all memory from addr to addr+length
 	addr = md->virtual & PAGE_MASK;
-	phys = __pfn_to_phys(md->pfn);
+	phys = __pfn_to_phys(md->pfn);	///TP: phys = pfn << 12, 
 	length = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
 
 	if (type->prot_l1 == 0 && ((addr | phys | length) & ~SECTION_MASK)) {     /// prot_l1=0 means this memtype is using only section, not page, which requires, va, pa, length aligned 1MB
@@ -806,10 +806,10 @@ static void __init create_mapping(struct map_desc *md)
 		return;
 	}
 
-	pgd = pgd_offset_k(addr);     ///TP:  pgd=0xc0007000 for VA:0xc0000000
+	pgd = pgd_offset_k(addr);	///TP: pgd=0xc0004000+4*(addr>>20), pgd=0xc0007000 for VA:0xc0000000, 0xc0007ffc for 0xfff00000(high vector including section 
 	end = addr + length;	///TP: end=0xef800000
 	do {
-		unsigned long next = pgd_addr_end(addr, end);	  ///TP: get the address of the next pgd boundary or end
+		unsigned long next = pgd_addr_end(addr, end);	///TP: min(addr+2MB, end) get the address of the next pgd boundary or end
 
 		alloc_init_pud(pgd, addr, next, phys, type);
 
@@ -821,7 +821,7 @@ static void __init create_mapping(struct map_desc *md)
 /*
  * Create the architecture specific mappings
  */
-///TP: create_mapping, and add to static vm list
+///TP: create_mapping, and add to static_vm list
 void __init iotable_init(struct map_desc *io_desc, int nr)
 {
 	struct map_desc *md;
@@ -829,12 +829,12 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 	struct static_vm *svm;
 
 	if (!nr)
-		return;
+		return;	///TP: check number of desc
 
-	svm = early_alloc_aligned(sizeof(*svm) * nr, __alignof__(*svm));
+	svm = early_alloc_aligned(sizeof(*svm) * nr, __alignof__(*svm));	///TP: 40B alloc:0x6f7fcfd8~0x6f7fd000 __alignof__(x) returns required alignment for x
 
 	for (md = io_desc; nr; md++, nr--) {
-		create_mapping(md);
+		create_mapping(md);	///TP: alloc 2nd pte regarding md
 
 		vm = &svm->vm;
 		vm->addr = (void *)(md->virtual & PAGE_MASK);
@@ -843,7 +843,7 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 		vm->flags = VM_IOREMAP | VM_ARM_STATIC_MAPPING;
 		vm->flags |= VM_ARM_MTYPE(md->type);
 		vm->caller = iotable_init;
-		add_static_vm_early(svm++);
+		add_static_vm_early(svm++);	///TP: add vm to vmlist, svm to static_vmlist maintaining sorted list in ascending way
 	}
 }
 
@@ -1195,6 +1195,7 @@ void __init arm_mm_memblock_reserve(void)
  * called function.  This means you can't use any function or debugging
  * method which may touch any device, otherwise the kernel _will_ crash.
  */
+///TP: mdesc in arch/arm/mach-exynos/mach-exynos5-dt.c
 static void __init devicemaps_init(const struct machine_desc *mdesc)
 {
 	struct map_desc map;
@@ -1206,9 +1207,9 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	 */
 	vectors = early_alloc(PAGE_SIZE * 2);   ///TP: vectors=0xef7fe000(VA), 0x6f7fe000(PA) zero-init 8kB near end of lowmeme and add it to reserved mem
 
-	early_trap_init(vectors);
+	early_trap_init(vectors);	///TP: copy vectors,stub,kuser_helper to 0xffff0000 and invalidate icache
 
-	for (addr = VMALLOC_START; addr; addr += PMD_SIZE)
+	for (addr = VMALLOC_START; addr; addr += PMD_SIZE)	///TP: clear high vectors
 		pmd_clear(pmd_off_k(addr));
 
 	/*
@@ -1254,12 +1255,12 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 #else
 	map.type = MT_LOW_VECTORS;
 #endif
-	create_mapping(&map);	///TP: mapping vectors(PA:0x6f7fe000) to VA:0xffff0000
+	create_mapping(&map);	///TP: mapping vectors(PA:0x6f7fe000) to VA:0xffff0000(also mapped to VA:0xef7fe000), 2nd pte allocation@0x6f7fd000
 
 	if (!vectors_high()) {
 		map.virtual = 0;
 		map.length = PAGE_SIZE * 2;
-		map.type = MT_LOW_VECTORS;
+		map.type = MT_LOW_VECTORS;	///TP: low vector does not support KUSER_HELPERS
 		create_mapping(&map);
 	}
 
@@ -1268,13 +1269,13 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	map.virtual = 0xffff0000 + PAGE_SIZE;
 	map.length = PAGE_SIZE;
 	map.type = MT_LOW_VECTORS;
-	create_mapping(&map);
+	create_mapping(&map);	///TP: mapping vectors(PA:0x6f7ff000) to VA:0xffff1000
 
 	/*
 	 * Ask the machine support to map in the statically mapped devices.
 	 */
 	if (mdesc->map_io)
-		mdesc->map_io();	///TP: mapped to exynos_init_io(), arch/arm/mach-exynos/mach-exynos5-dt.c
+		mdesc->map_io();	///TP: insert vmlist, static_vmlist using  iotable_init(), mapped to exynos_init_io(), arch/arm/mach-exynos/mach-exynos5-dt.c
 	else
 		debug_ll_io_init();
 	fill_pmd_gaps();

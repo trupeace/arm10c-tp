@@ -41,7 +41,9 @@
 
 
 LIST_HEAD(static_vmlist);
-
+///TP: set by exynos_init_io()
+/// SYSC:0xf6100000+64kB  TMR :0xf6300000+16kB WDT :0xf6400000+ 4kB CHID:0xf8000000+ 4kB
+/// CMU :0xf8100000+144kB PMU :0xf8180000+64kB SRAM:0xf8400000+ 4kB ROMC:0xf84c0000+ 4kB
 static struct static_vm *find_static_vm_paddr(phys_addr_t paddr,
 			size_t size, unsigned int mtype)
 {
@@ -59,7 +61,7 @@ static struct static_vm *find_static_vm_paddr(phys_addr_t paddr,
 			paddr + size - 1 > vm->phys_addr + vm->size - 1)
 			continue;
 
-		return svm;
+		return svm;	///TP: VM_ARM_STATIC_MAPPING && same type && paddr++size in vm
 	}
 
 	return NULL;
@@ -91,16 +93,16 @@ void __init add_static_vm_early(struct static_vm *svm)
 	void *vaddr;
 
 	vm = &svm->vm;
-	vm_area_add_early(vm);
+	vm_area_add_early(vm);	///TP: insert vm into vmlist maintaining sorted list
 	vaddr = vm->addr;
 
 	list_for_each_entry(curr_svm, &static_vmlist, list) {
 		vm = &curr_svm->vm;
 
-		if (vm->addr > vaddr)
-			break;
+		if (vm->addr > vaddr)	///TP: Q: why not same to vmlist condition(>=)?
+			break;	///TP: find the position to insert in ascending list
 	}
-	list_add_tail(&svm->list, &curr_svm->list);
+	list_add_tail(&svm->list, &curr_svm->list);	///TP: insert svm to static_vmlist
 }
 
 int ioremap_page(unsigned long virt, unsigned long phys,

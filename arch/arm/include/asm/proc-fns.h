@@ -99,7 +99,7 @@ extern void cpu_do_resume(void *);
 #define cpu_reset			processor.reset
 #define cpu_do_idle			processor._do_idle
 #define cpu_dcache_clean_area		processor.dcache_clean_area
-#define cpu_set_pte_ext			processor.set_pte_ext
+#define cpu_set_pte_ext			processor.set_pte_ext	///TP: mapped to cpu_v7_set_pte_ext
 #define cpu_do_switch_mm		processor.switch_mm
 
 /* These three are private to arch/arm/kernel/suspend.c */

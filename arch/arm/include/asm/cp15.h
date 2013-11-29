@@ -49,8 +49,8 @@
 
 #ifdef CONFIG_CPU_CP15
 
-extern unsigned long cr_no_alignment;	/* defined in entry-armv.S */
-extern unsigned long cr_alignment;	/* defined in entry-armv.S */
+extern unsigned long cr_no_alignment;	/* defined in entry-armv.S */	///TP:SCTLR, cr=0x10c5387d, set by __v7_setup() in arch/arm/mm/proc-v7.S
+extern unsigned long cr_alignment;	/* defined in entry-armv.S */	///TP:SCTLR, cr=0x10c5387d
 
 static inline unsigned int get_cr(void)
 {

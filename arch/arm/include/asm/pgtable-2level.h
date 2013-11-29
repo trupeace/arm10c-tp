@@ -115,6 +115,12 @@
  * The PTE table pointer refers to the hardware entries; the "Linux"
  * entries are stored 1024 bytes below.
  */
+///TP: Linux Page table format
+///-----------------------------------------------
+///|31     12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+///|PA[31:12]| N| S|XN| U| R| D|   MEMF    | Y|PV|
+///-----------------------------------------------
+/// N: NONE, S: SHARED, XN: XN, U: USER, R:RDONLY, D: DIRTY, MEMF: mem type or file(if !present), Y: YONG, P: PRESENT, V: VALID
 #define L_PTE_VALID		(_AT(pteval_t, 1) << 0)		/* Valid */
 #define L_PTE_PRESENT		(_AT(pteval_t, 1) << 0)
 #define L_PTE_YOUNG		(_AT(pteval_t, 1) << 1)

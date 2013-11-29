@@ -54,6 +54,12 @@
  * + Level 2 descriptor (PTE)
  *   - common
  */
+///TP: HW Page table(2nd) format
+///-----------------------------------------------
+///|31     12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0|
+///|PA[31:12]|nG| S|AP|TEX[2:0]| AP10| C| B| 1|XN|
+///-----------------------------------------------
+/// nG: not Global, S: Shareable, AP: APX/AP[2], AP10: AP[1:0], TEX,C,B: memory type 
 #define PTE_TYPE_MASK		(_AT(pteval_t, 3) << 0)
 #define PTE_TYPE_FAULT		(_AT(pteval_t, 0) << 0)
 #define PTE_TYPE_LARGE		(_AT(pteval_t, 1) << 0)

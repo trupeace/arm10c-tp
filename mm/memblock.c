@@ -110,17 +110,17 @@ phys_addr_t __init_memblock memblock_find_in_range_node(phys_addr_t start,
 		end = memblock.current_limit;
 
 	/* avoid allocating the first page */
-	start = max_t(phys_addr_t, start, PAGE_SIZE);   ///same to max() with typecasting
+	start = max_t(phys_addr_t, start, PAGE_SIZE);   ///TP: same to max() with typecasting
 	end = max(start, end);
 
-	for_each_free_mem_range_reverse(i, nid, &this_start, &this_end, NULL) {
+	for_each_free_mem_range_reverse(i, nid, &this_start, &this_end, NULL) { ///TP: this return the free block with this_start&this_end, reversely (from end of memblock to start)
 		this_start = clamp(this_start, start, end);
 		this_end = clamp(this_end, start, end);
 
 		if (this_end < size)
-			continue;
+			continue;	///TP: Q: not break?
 
-		cand = round_down(this_end - size, align);
+		cand = round_down(this_end - size, align);	///TP: cand for candidate
 		if (cand >= this_start)
 			return cand;
 	}
@@ -380,7 +380,7 @@ static int __init_memblock memblock_add_region(struct memblock_type *type,
 
 	/* special case for empty array */
 	if (type->regions[0].size == 0) {       /// normally, condition met only once at the first call
-		WARN_ON(type->cnt != 1 || type->total_size);    ///TPQ: why initial cnt = 1, empty array?
+		WARN_ON(type->cnt != 1 || type->total_size);    ///TP: Q: why initial cnt = 1, empty array?
 		type->regions[0].base = base;
 		type->regions[0].size = size;
 		memblock_set_region_node(&type->regions[0], nid);
@@ -452,7 +452,7 @@ int __init_memblock memblock_add_node(phys_addr_t base, phys_addr_t size,
 
 int __init_memblock memblock_add(phys_addr_t base, phys_addr_t size)
 {
-	return memblock_add_region(&memblock.memory, base, size, MAX_NUMNODES); ///TP: MAX_NUMNODES: nodes in NUMA, TPC: need to be modified in NUMA
+	return memblock_add_region(&memblock.memory, base, size, MAX_NUMNODES); ///TP: MAX_NUMNODES: nodes in NUMA, TP: C: need to be modified in NUMA
 }
 
 /**
@@ -791,7 +791,7 @@ static phys_addr_t __init memblock_alloc_base_nid(phys_addr_t size,
 	/* align @size to avoid excessive fragmentation on reserved array */
 	size = round_up(size, align);
 
-	found = memblock_find_in_range_node(0, max_addr, size, align, nid);   ///found: 0x6f7fe000
+	found = memblock_find_in_range_node(0, max_addr, size, align, nid);   ///TP: 0x6f7fe000(2*PAGE_SIZE(vectors+stub)), 0x6f7fd000(2nd pte for 0xfff00000)
 	if (found && !memblock_reserve(found, size))
 		return found;
 
@@ -823,7 +823,7 @@ phys_addr_t __init memblock_alloc_base(phys_addr_t size, phys_addr_t align, phys
 
 phys_addr_t __init memblock_alloc(phys_addr_t size, phys_addr_t align)
 {
-	return memblock_alloc_base(size, align, MEMBLOCK_ALLOC_ACCESSIBLE);
+	return memblock_alloc_base(size, align, MEMBLOCK_ALLOC_ACCESSIBLE);	///TP: MEMBLOCK_ALLOC_ACCESSIBLE: maxaddr is set to memblock.current_limit
 }
 
 phys_addr_t __init memblock_alloc_try_nid(phys_addr_t size, phys_addr_t align, int nid)

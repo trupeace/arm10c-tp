@@ -37,6 +37,8 @@
 ///TP:  all comments related to real number assumes that the target is exynos5420 
 ///     PAGE_OFFSET: 0xc0000000 (VMSPLIT_3G option)
 ///     TEXT_OFFSET: 0x8000
+/// for inline assembly
+///   study clobber list(::), constraint("=&r",...)
 #define KERNEL_RAM_VADDR	(PAGE_OFFSET + TEXT_OFFSET)
 #if (KERNEL_RAM_VADDR & 0xffff) != 0x8000
 ///TP:  #error for prepocessing error???
@@ -180,9 +182,12 @@ __create_page_tables:
 	mov	r0, r4
 	mov	r3, #0
 	add	r6, r0, #PG_DIR_SIZE
-1:	str	r3, [r0], #4
-	str	r3, [r0], #4
-	str	r3, [r0], #4
+	///TP: someone ask why do store 4 times? 3 possibilities
+        ///   1. cache align for writeback (no here)
+        ///   2. loop unroll(no here)
+        ///   3. compromized convection for branch penalty and code size
+1:	str	r3, [r0], #4	///TP: Q: why not use stm?, scratch register may not be enough
+	str	r3, [r0], #4	str	r3, [r0], #4
 	str	r3, [r0], #4
 	teq	r0, r6
 	bne	1b
@@ -253,7 +258,7 @@ __create_page_tables:
 	add	r0, r4, #PAGE_OFFSET >> (SECTION_SHIFT - PMD_ORDER) ///TP: r0: page table entry addr to virt addr 0xc0000000(PAGE_OFFSET)
 	ldr	r6, =(_end - 1)	///TP: end Image
 	orr	r3, r8, r7	///r8: PHY_OFFSET
-	add	r6, r4, r6, lsr #(SECTION_SHIFT - PMD_ORDER)  ///TP now r6 is pte of the end of Image 
+	add	r6, r4, r6, lsr #(SECTION_SHIFT - PMD_ORDER)  ///TP: now r6 is pte of the end of Image 
 1:	str	r3, [r0], #1 << PMD_ORDER
 	add	r3, r3, #1 << SECTION_SHIFT
 	cmp	r0, r6
@@ -282,7 +287,7 @@ __create_page_tables:
 	 * Then map boot params address in r2 if specified.
 	 * We map 2 sections in case the ATAGs/DTB crosses a section boundary.
 	 */
-	///TP:comment
+	///TP: comment
 	///r2: ATAGS/DTB address
 	///r4: 0x20004000, page table base r8 + (#TEXT_OFFSET(0x8000) - PG_DIR_SIZE(0x4000))
 	///r7: section entry property
