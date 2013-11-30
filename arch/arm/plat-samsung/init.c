@@ -47,13 +47,19 @@ void __init s3c_init_cpu(unsigned long idcode,
 			 struct cpu_table *cputab, unsigned int cputab_size)
 {
 	cpu = s3c_lookup_cpu(idcode, cputab, cputab_size);	///TP: cpu = &cpu_ids[4]
+	///TP: cpu_table *cpu
+	/// .idcode		= EXYNOS5420_SOC_ID,
+	/// .idmask		= EXYNOS5_SOC_MASK,
+	/// .map_io		= exynos5_map_io,
+	/// .init		= exynos_init,
+	/// .name		= name_exynos5420,
 
 	if (cpu == NULL) {
 		printk(KERN_ERR "Unknown CPU type 0x%08lx\n", idcode);
 		panic("Unknown S3C24XX CPU");
 	}
 
-	printk("CPU %s (id 0x%08lx)\n", cpu->name, idcode);
+	printk("CPU %s (id 0x%08lx)\n", cpu->name, idcode);	///TP: CPU EXYNOS5420 (id 0xE5420000)
 
 	if (cpu->init == NULL) {
 		printk(KERN_ERR "CPU %s support not enabled\n", cpu->name);

@@ -1108,7 +1108,12 @@ void *vm_map_ram(struct page **pages, unsigned int count, int node, pgprot_t pro
 }
 EXPORT_SYMBOL(vm_map_ram);
 
-static struct vm_struct *vmlist __initdata;	///TP: sorted vmap list in ascending order, chipid reg is added by exynos_fdt_map_chipid()
+static struct vm_struct *vmlist __initdata;	///TP: sorted vmap list(single linked list) in ascending order, chipid reg is added by exynos_fdt_map_chipid()
+///TP: set by exynos_init_io()
+/// SYSC:0xf6100000+64kB  PA:0x10050100, TMR :0xf6300000+16kB PA:0x12DD0000
+/// WDT :0xf6400000+ 4kB  PA:0x101D0000, CHID:0xf8000000+ 4kB PA:0x10000000
+/// CMU :0xf8100000+144kB PA:0x10010000, PMU :0xf8180000+64kB PA:0x10040000
+/// SRAM:0xf8400000+ 4kB  PA:0x02020000, ROMC:0xf84c0000+ 4kB PA:0x12250000
 /**
  * vm_area_add_early - add vmap area early during boot
  * @vm: vm_struct to add
@@ -1126,10 +1131,10 @@ void __init vm_area_add_early(struct vm_struct *vm)
 	BUG_ON(vmap_initialized);
 	for (p = &vmlist; (tmp = *p) != NULL; p = &tmp->next) {
 		if (tmp->addr >= vm->addr) {
-			BUG_ON(tmp->addr < vm->addr + vm->size);
+			BUG_ON(tmp->addr < vm->addr + vm->size);	///TP: tmp start addr is in vm region, overlapped!!!
 			break;
 		} else
-			BUG_ON(tmp->addr + tmp->size > vm->addr);
+			BUG_ON(tmp->addr + tmp->size > vm->addr);	///TP: vm start addr is in tmp region
 	}
 	vm->next = *p;	///TP: insert current vm into sorted vmlist in ascending order
 	*p = vm;

@@ -100,16 +100,16 @@ EXPORT_SYMBOL(elf_hwcap);
 
 
 #ifdef MULTI_CPU
-struct processor processor __read_mostly;   ///TP: v7_processor_functions, set by setup_processor(), functions defined in arch/arm/mm/proc-v7.S
+struct processor processor __read_mostly;	///TP: v7_processor_functions, set by setup_processor(), functions defined in arch/arm/mm/proc-v7.S
 #endif
 #ifdef MULTI_TLB
-struct cpu_tlb_fns cpu_tlb __read_mostly;   ///TP: v7wbi_tlb_fns
+struct cpu_tlb_fns cpu_tlb __read_mostly;	///TP: v7wbi_tlb_fns
 #endif
 #ifdef MULTI_USER
-struct cpu_user_fns cpu_user __read_mostly; ///TP: v6_user_fns
+struct cpu_user_fns cpu_user __read_mostly;	///TP: v6_user_fns
 #endif
 #ifdef MULTI_CACHE
-struct cpu_cache_fns cpu_cache __read_mostly;   ///TP: v7_cache_fns, define_cache_functions v7   // .type	\name\()_cache_fns  // refer to proc-v7.S, cache-v7.S, proc-macros.S 
+struct cpu_cache_fns cpu_cache __read_mostly;	///TP: v7_cache_fns, define_cache_functions v7   // .type	\name\()_cache_fns  // refer to proc-v7.S, cache-v7.S, proc-macros.S 
 #endif
 #ifdef CONFIG_OUTER_CACHE
 struct outer_cache_fns outer_cache __read_mostly;
@@ -122,7 +122,7 @@ EXPORT_SYMBOL(outer_cache);
  * variable directly.
  */
 /// __read_mostly: seperate section which is assumed to be used frequently, for cache hit rate
-int __cpu_architecture __read_mostly = CPU_ARCH_UNKNOWN;    ///TP: CPU_ARCH_ARMv7
+int __cpu_architecture __read_mostly = CPU_ARCH_UNKNOWN;	///TP: CPU_ARCH_ARMv7
 
 struct stack {
 	u32 irq[3];
@@ -137,7 +137,7 @@ static struct stack stacks[NR_CPUS];
 char elf_platform[ELF_PLATFORM_SIZE];
 EXPORT_SYMBOL(elf_platform);
 
-static const char *cpu_name;    ///TP: pointer of "ARMv7 Processor" in proc-v7.S
+static const char *cpu_name;	///TP: pointer of "ARMv7 Processor" in proc-v7.S
 static const char *machine_name;
 static char __initdata cmd_line[COMMAND_LINE_SIZE];
 const struct machine_desc *machine_desc __initdata;
@@ -309,7 +309,7 @@ static void __init cacheid_init(void)
 		cacheid = 0;
 	} else if (arch >= CPU_ARCH_ARMv6) {
 		unsigned int cachetype = read_cpuid_cachetype();
-		if ((cachetype & (7 << 29)) == 4 << 29) { ///TP: if fmt is v7 fmt
+		if ((cachetype & (7 << 29)) == 4 << 29) {	///TP: if fmt is v7 fmt
 			/* ARMv7 register format */
 			arch = CPU_ARCH_ARMv7;
 			cacheid = CACHEID_VIPT_NONALIASING;
@@ -318,7 +318,7 @@ static void __init cacheid_init(void)
 				cacheid |= CACHEID_ASID_TAGGED;
 				break;
 			case (3 << 14):
-				cacheid |= CACHEID_PIPT;    ///TP: CA15
+				cacheid |= CACHEID_PIPT;	///TP: CA15
 				break;
 			}
 		} else {
@@ -374,7 +374,7 @@ static void __init cpuid_init_hwcaps(void)
 	if (cpu_architecture() < CPU_ARCH_ARMv7)
 		return;
 
-  ///TP: check Integer DIVISOR support
+	///TP: check Integer DIVISOR support
 	divide_instrs = (read_cpuid_ext(CPUID_EXT_ISAR0) & 0x0f000000) >> 24;
 
 	switch (divide_instrs) {
@@ -570,8 +570,8 @@ static void __init setup_processor(void)
 		while (1);
 	}
 
-	cpu_name = list->cpu_name;    ///TP: "ARMv7 Processor"
-	__cpu_architecture = __get_cpu_architecture(); ///TP: CPU_ARCH_ARMv7, Main ID 0x410fc0f0
+	cpu_name = list->cpu_name;	///TP: "ARMv7 Processor"
+	__cpu_architecture = __get_cpu_architecture();	///TP: CPU_ARCH_ARMv7, Main ID 0x410fc0f0
 
 #ifdef MULTI_CPU
 	processor = *list->proc;
@@ -588,14 +588,14 @@ static void __init setup_processor(void)
 
 	printk("CPU: %s [%08x] revision %d (ARMv%s), cr=%08lx\n",
 	       cpu_name, read_cpuid_id(), read_cpuid_id() & 15,
-	       proc_arch[cpu_architecture()], cr_alignment);///TP: cr_aligment: 0x10c53c7f SCTLR setting value, set in arch/arm/kernel/head-common.S
+	       proc_arch[cpu_architecture()], cr_alignment);	///TP: cr_aligment: 0x10c53c7f SCTLR setting value, set in arch/arm/kernel/head-common.S
 
-  ///TP: seems to relate 'uname' command
+	///TP: seems to relate 'uname' command .
 	snprintf(init_utsname()->machine, __NEW_UTS_LEN + 1, "%s%c",
-		 list->arch_name, ENDIANNESS);  ///TP: "armv7[lb]"
+		 list->arch_name, ENDIANNESS);	///TP: "armv7[lb]"
 	snprintf(elf_platform, ELF_PLATFORM_SIZE, "%s%c",
-		 list->elf_name, ENDIANNESS);   ///TP: "V7"
-	elf_hwcap = list->elf_hwcap;      ///TP: .long	HWCAP_SWP | HWCAP_HALF | HWCAP_THUMB | HWCAP_FAST_MULT | HWCAP_EDSP | HWCAP_TLS | \hwcaps
+		 list->elf_name, ENDIANNESS);	///TP: "V7"
+	elf_hwcap = list->elf_hwcap;		///TP: .long	HWCAP_SWP | HWCAP_HALF | HWCAP_THUMB | HWCAP_FAST_MULT | HWCAP_EDSP | HWCAP_TLS | \hwcaps
 
 	cpuid_init_hwcaps();
 
@@ -603,7 +603,7 @@ static void __init setup_processor(void)
 	elf_hwcap &= ~(HWCAP_THUMB | HWCAP_IDIVT);
 #endif
 
-	feat_v6_fixup(); ///TP: Main ID 0x410fc0f0
+	feat_v6_fixup();	///TP: Main ID 0x410fc0f0
 
 	cacheid_init();
 	cpu_init();
@@ -627,7 +627,7 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 {
 	struct membank *bank = &meminfo.bank[meminfo.nr_banks];
 
-	if (meminfo.nr_banks >= NR_BANKS) {   ///TP:for ARM NR_BANKS = 8
+	if (meminfo.nr_banks >= NR_BANKS) {	///TP:for ARM NR_BANKS = 8
 		printk(KERN_CRIT "NR_BANKS too low, "
 			"ignoring memory at 0x%08llx\n", (long long)start);
 		return -EINVAL;
@@ -637,7 +637,7 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 	 * Ensure that start/size are aligned to a page boundary.
 	 * Size is appropriately rounded down, start is rounded up.
 	 */
-	size -= start & ~PAGE_MASK;   ///TP: mask page=4kB
+	size -= start & ~PAGE_MASK;	///TP: mask page=4kB
 	bank->start = PAGE_ALIGN(start);
 
 #ifndef CONFIG_ARM_LPAE
@@ -859,8 +859,8 @@ void __init setup_arch(char **cmdline_p)
 	const struct machine_desc *mdesc;
 
 	setup_processor();
-	mdesc = setup_machine_fdt(__atags_pointer);   ///TP: setup model, boot_command_line(bootargs in dtb), memory
-  ///TP: now mdesc = best matched machine_desc * in .arch.info.init section, refer to arch/arm/mach-exynos/mach-exynos5-dt.c
+	mdesc = setup_machine_fdt(__atags_pointer);	///TP: setup model, boot_command_line(bootargs in dtb), memory
+	///TP: now mdesc = best matched machine_desc * in .arch.info.init section, refer to arch/arm/mach-exynos/mach-exynos5-dt.c
 	if (!mdesc)
 		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);
 	machine_desc = mdesc;
@@ -876,16 +876,16 @@ void __init setup_arch(char **cmdline_p)
 	init_mm.end_data   = (unsigned long) _edata;
 	init_mm.brk	   = (unsigned long) _end;
 
-  ///TP: 20131017
+	///TP: 20131017
 	/* populate cmd_line too for later use, preserving boot_command_line */
 	strlcpy(cmd_line, boot_command_line, COMMAND_LINE_SIZE);
-	*cmdline_p = cmd_line;    ///TP: setup_arch parameter
+	*cmdline_p = cmd_line;		///TP: setup_arch parameter
 
 	parse_early_param();
 
-	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);    ///TP: lib/sort.c, heapsort, sort meminfo.bank[] by start pfn(page frame number) address is full range unsigned 32b, which makes 32b compare fail, thus use pfn!!!
+	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);	///TP: lib/sort.c, heapsort, sort meminfo.bank[] by start pfn(page frame number) address is full range unsigned 32b, which makes 32b compare fail, thus use pfn!!!
 	sanity_check_meminfo();
-	arm_memblock_init(&meminfo, mdesc);   ///TP: refering meminfo, init memblock.memory and reserve memblock.reserved for kernel, dtb, DMA, video buffer, ...
+	arm_memblock_init(&meminfo, mdesc);	///TP: refering meminfo, init memblock.memory and reserve memblock.reserved for kernel, dtb, DMA, video buffer, ...
 
 	paging_init(mdesc);
 	request_standard_resources(mdesc);

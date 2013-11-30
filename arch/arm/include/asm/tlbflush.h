@@ -326,15 +326,15 @@ static inline void __local_flush_tlb_all(void)
 	const int zero = 0;
 	const unsigned int __tlb_flag = __cpu_tlb_flags;
 
-	tlb_op(TLB_V4_U_FULL | TLB_V6_U_FULL, "c8, c7, 0", zero);
-	tlb_op(TLB_V4_D_FULL | TLB_V6_D_FULL, "c8, c6, 0", zero);
-	tlb_op(TLB_V4_I_FULL | TLB_V6_I_FULL, "c8, c5, 0", zero);
+	tlb_op(TLB_V4_U_FULL | TLB_V6_U_FULL, "c8, c7, 0", zero);	///TP: TLBIALL
+	tlb_op(TLB_V4_D_FULL | TLB_V6_D_FULL, "c8, c6, 0", zero);	///TP: DTLBIALL
+	tlb_op(TLB_V4_I_FULL | TLB_V6_I_FULL, "c8, c5, 0", zero);	///TP: ITLBIALL
 }
 
 static inline void local_flush_tlb_all(void)
 {
 	const int zero = 0;
-	const unsigned int __tlb_flag = __cpu_tlb_flags;
+	const unsigned int __tlb_flag = __cpu_tlb_flags;	///TP: v7wbi_tlb_fns
 
 	if (tlb_flag(TLB_WB))
 		dsb(nshst);

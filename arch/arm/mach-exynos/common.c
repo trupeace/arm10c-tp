@@ -342,7 +342,7 @@ void __init exynos_init_io(void)
 	s5p_init_cpu(S5P_VA_CHIPID);
 
 	s3c_init_cpu(samsung_cpu_id, cpu_ids, ARRAY_SIZE(cpu_ids));
-	///TP: alloc static_vm and 2nd pte, insert svm to vmlist, static_vmlist
+	///TP: alloc static_vm and 2nd pte, map to highmem, insert svm to vmlist, static_vmlist
         /// now vmlist and static_vmlist have
         /// SYSC:0xf6100000+64kB  TMR :0xf6300000+16kB WDT :0xf6400000+ 4kB CHID:0xf8000000+ 4kB
         /// CMU :0xf8100000+144kB PMU :0xf8180000+64kB SRAM:0xf8400000+ 4kB ROMC:0xf84c0000+ 4kB

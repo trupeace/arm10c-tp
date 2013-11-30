@@ -123,7 +123,7 @@ struct cpu_cache_fns {
  */
 #ifdef MULTI_CACHE
 
-extern struct cpu_cache_fns cpu_cache;
+extern struct cpu_cache_fns cpu_cache;	///TP: v7_cache_fns
 
 #define __cpuc_flush_icache_all		cpu_cache.flush_icache_all
 #define __cpuc_flush_kern_all		cpu_cache.flush_kern_all
@@ -217,9 +217,9 @@ static inline void __flush_icache_all(void)
 /*
  * Flush caches up to Level of Unification Inner Shareable
  */
-#define flush_cache_louis()		__cpuc_flush_kern_louis()
+#define flush_cache_louis()		__cpuc_flush_kern_louis()	///TP: v7_flush_kern_cache_louis
 
-#define flush_cache_all()		__cpuc_flush_kern_all()
+#define flush_cache_all()		__cpuc_flush_kern_all()		///TP: v7_flush_kern_cache_all
 
 static inline void vivt_flush_cache_mm(struct mm_struct *mm)
 {

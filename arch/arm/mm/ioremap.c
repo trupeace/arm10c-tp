@@ -42,8 +42,10 @@
 
 LIST_HEAD(static_vmlist);
 ///TP: set by exynos_init_io()
-/// SYSC:0xf6100000+64kB  TMR :0xf6300000+16kB WDT :0xf6400000+ 4kB CHID:0xf8000000+ 4kB
-/// CMU :0xf8100000+144kB PMU :0xf8180000+64kB SRAM:0xf8400000+ 4kB ROMC:0xf84c0000+ 4kB
+/// SYSC:0xf6100000+64kB  PA:0x10050100, TMR :0xf6300000+ 16kB PA:0x12DD0000
+/// WDT :0xf6400000+ 4kB  PA:0x101D0000, CHID:0xf8000000+  4kB PA:0x10000000
+/// CMU :0xf8100000+144kB PA:0x10010000, PMU :0xf8180000+ 64kB PA:0x10040000, CMU for Clock Management, PMU for Power Management
+/// SRAM:0xf8400000+ 4kB  PA:0x02020000, ROMC:0xf84c0000+  4kB PA:0x12250000
 static struct static_vm *find_static_vm_paddr(phys_addr_t paddr,
 			size_t size, unsigned int mtype)
 {
@@ -93,16 +95,27 @@ void __init add_static_vm_early(struct static_vm *svm)
 	void *vaddr;
 
 	vm = &svm->vm;
-	vm_area_add_early(vm);	///TP: insert vm into vmlist maintaining sorted list
+	vm_area_add_early(vm);	///TP: insert vm into vmlist maintaining sorted list(sort val:vm->addr)
 	vaddr = vm->addr;
 
+	///TP: comment
+	/*
+	for (curr_svm = list_entry((&static_vmlist)->next, typeof(*curr_svm), list);	\
+	     &curr_svm->list != (&static_vmlist); 	\
+	     curr_svm = list_entry(curr_svm->list.next, typeof(*curr_svm), list))
+
+	list_entry(ptr, type, member) = container_of: get the pointer of struct which have member(inverse function of offsetof())
+	/// list is managed by address of list member, using list 
+	///TP: Q: why not locate list first, it seems to make more sense.
+	*/
+	
 	list_for_each_entry(curr_svm, &static_vmlist, list) {
 		vm = &curr_svm->vm;
 
-		if (vm->addr > vaddr)	///TP: Q: why not same to vmlist condition(>=)?
-			break;	///TP: find the position to insert in ascending list
+		if (vm->addr > vaddr)	///TP: Q: why not same to vmlist condition(>=)? >= should be > (no overlapping allowed!)
+			break;	///TP: found the position to insert in ascending list
 	}
-	list_add_tail(&svm->list, &curr_svm->list);	///TP: insert svm to static_vmlist
+	list_add_tail(&svm->list, &curr_svm->list);	///TP: insert svm->list to static_vmlist
 }
 
 int ioremap_page(unsigned long virt, unsigned long phys,

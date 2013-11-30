@@ -105,7 +105,7 @@ static inline u32 __raw_readl(const volatile void __iomem *addr)
 {
 	u32 val;
 	asm volatile("ldr %1, %0"
-		     : "+Qo" (*(volatile u32 __force *)addr),	///TP:Q(single base with no offset), o(constant)
+		     : "+Qo" (*(volatile u32 __force *)addr),	///TP: ldr r1, [r0], Q(single base with no offset), o(constant), ref: http://gcc.gnu.org/onlinedocs/gcc/Constraints.html
 		       "=r" (val));
 	return val;
 }

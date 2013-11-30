@@ -149,7 +149,7 @@ ENTRY(stext)		///TP: .global and .align in include/linux/linkage.h
 						@ mmu has been enabled
 	adr	lr, BSYM(1f)			@ return (PIC) address
 	mov	r8, r4				@ set TTBR1 to swapper_pg_dir ///TP: r4=0x20004000
- ARM(	add	pc, r10, #PROCINFO_INITFUNC	)   ///TP: PROCINFO_INITFUNC(5), r10[5] = __v7_ca15mp_setup	
+ ARM(	add	pc, r10, #PROCINFO_INITFUNC	)   ///TP: PROCINFO_INITFUNC(5), r10[5] = __v7_ca15mp_setup
 	///TP: DEFINE(PROCINFO_INITFUNC,	offsetof(struct proc_info_list, __cpu_flush));
 	///     pc set to the addr or W(b) \initfunc, \initfunc=__v7_ca15mp_setup()
  THUMB(	add	r12, r10, #PROCINFO_INITFUNC	)

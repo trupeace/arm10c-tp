@@ -17,6 +17,7 @@ struct vm_area_struct;		/* vma defining user mapping in mm_types.h */
 #define VM_VPAGES		0x00000010	/* buffer for pages was vmalloc'ed */
 #define VM_UNINITIALIZED	0x00000020	/* vm_struct is not fully initialized */
 /* bits [20..32] reserved for arch specific ioremap internals */
+///TP: for static_vm(iotable_init()), [24:20] memory_type
 
 /*
  * Maximum alignment for ioremap() regions.

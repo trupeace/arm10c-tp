@@ -33,6 +33,7 @@ static inline pte_t get_top_pte(unsigned long va)
 
 static inline pmd_t *pmd_off_k(unsigned long virt)
 {
+	///TP: return the address of section entry(step:2MB)
 	return pmd_offset(pud_offset(pgd_offset_k(virt), virt), virt);
 }
 

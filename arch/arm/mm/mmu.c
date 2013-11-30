@@ -46,7 +46,7 @@ EXPORT_SYMBOL(empty_zero_page);
 /*
  * The pmd table for the upper-most set of pages.
  */
-pmd_t *top_pmd;
+pmd_t *top_pmd;		///TP: pmd for 0xffff0000=0xc0007ff8, directing 0x6f7fd000, set by paging_init()
 
 #define CPOLICY_UNCACHED	0
 #define CPOLICY_BUFFERED	1
@@ -821,7 +821,7 @@ static void __init create_mapping(struct map_desc *md)
 /*
  * Create the architecture specific mappings
  */
-///TP: create_mapping, and add to static_vm list
+///TP: create_mapping, and add to static_vmlist
 void __init iotable_init(struct map_desc *io_desc, int nr)
 {
 	struct map_desc *md;
@@ -834,14 +834,14 @@ void __init iotable_init(struct map_desc *io_desc, int nr)
 	svm = early_alloc_aligned(sizeof(*svm) * nr, __alignof__(*svm));	///TP: 40B alloc:0x6f7fcfd8~0x6f7fd000 __alignof__(x) returns required alignment for x
 
 	for (md = io_desc; nr; md++, nr--) {
-		create_mapping(md);	///TP: alloc 2nd pte regarding md
+		create_mapping(md);	///TP: map io region to high mem. if needed, alloc 2nd pte regarding md
 
 		vm = &svm->vm;
-		vm->addr = (void *)(md->virtual & PAGE_MASK);
+		vm->addr = (void *)(md->virtual & PAGE_MASK);	///TP: aligned to PAGE
 		vm->size = PAGE_ALIGN(md->length + (md->virtual & ~PAGE_MASK));
 		vm->phys_addr = __pfn_to_phys(md->pfn);
 		vm->flags = VM_IOREMAP | VM_ARM_STATIC_MAPPING;
-		vm->flags |= VM_ARM_MTYPE(md->type);
+		vm->flags |= VM_ARM_MTYPE(md->type);	///TP: mostly type=MT_DEVICE
 		vm->caller = iotable_init;
 		add_static_vm_early(svm++);	///TP: add vm to vmlist, svm to static_vmlist maintaining sorted list in ascending way
 	}
@@ -858,7 +858,7 @@ void __init vm_reserve_area_early(unsigned long addr, unsigned long size,
 	vm = &svm->vm;
 	vm->addr = (void *)addr;
 	vm->size = size;
-	vm->flags = VM_IOREMAP | VM_ARM_EMPTY_MAPPING;
+	vm->flags = VM_IOREMAP | VM_ARM_EMPTY_MAPPING;	///TP: VM_ARM_EMPTY_MAPPING named vm is not usable
 	vm->caller = caller;
 	add_static_vm_early(svm);
 }
@@ -896,6 +896,8 @@ static void __init fill_pmd_gaps(void)
 		if (addr < next)
 			continue;
 
+		///TP: it seems that give up partially used section type pmd
+		/// by add vmlist without create_mapping()
 		/*
 		 * Check if this vm starts on an odd section boundary.
 		 * If so and the first section entry for this PMD is free
@@ -920,7 +922,7 @@ static void __init fill_pmd_gaps(void)
 		}
 
 		/* no need to look at any vm entry until we hit the next PMD */
-		next = (addr + PMD_SIZE - 1) & PMD_MASK;
+		next = (addr + PMD_SIZE - 1) & PMD_MASK;	///TP: next 2MB aligned addr
 	}
 }
 
@@ -1275,10 +1277,10 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	 * Ask the machine support to map in the statically mapped devices.
 	 */
 	if (mdesc->map_io)
-		mdesc->map_io();	///TP: insert vmlist, static_vmlist using  iotable_init(), mapped to exynos_init_io(), arch/arm/mach-exynos/mach-exynos5-dt.c
+		mdesc->map_io();	///TP: insert vmlist, static_vmlist using iotable_init(), mapped to exynos_init_io(), arch/arm/mach-exynos/mach-exynos5-dt.c
 	else
 		debug_ll_io_init();
-	fill_pmd_gaps();
+	fill_pmd_gaps();	///TP: it seems that give up section entry of partially unused section type pgd: add static_vmlist without mapping
 
 	/* Reserve fixed i/o space in VMALLOC region */
 	pci_reserve_io();
@@ -1289,15 +1291,15 @@ static void __init devicemaps_init(const struct machine_desc *mdesc)
 	 * any write-allocated cache lines in the vector page are written
 	 * back.  After this point, we can start to touch devices again.
 	 */
-	local_flush_tlb_all();
-	flush_cache_all();
+	local_flush_tlb_all();	///TP: flush TLB and dsb,isb
+	flush_cache_all();	///TP: flush dcache to LOC, clean & invalidate by set/way
 }
 
 static void __init kmap_init(void)
 {
 #ifdef CONFIG_HIGHMEM
 	pkmap_page_table = early_pte_alloc(pmd_off_k(PKMAP_BASE),
-		PKMAP_BASE, _PAGE_KERNEL_TABLE);
+		PKMAP_BASE, _PAGE_KERNEL_TABLE);	///TP: PKMAP_BASE:0xbfe00000
 #endif
 }
 
@@ -1333,12 +1335,12 @@ void __init paging_init(const struct machine_desc *mdesc)
 {
 	void *zero_page;
 
-	build_mem_type_table();   ///TP: depending on processor arch., adjust mem type table, for eg, smp set Shareable 
-	prepare_page_table();     ///TP: clear page table except kernel image, ...
-	map_lowmem();             ///TP: map lowmem(3G-4G) using memblock.memory
-	dma_contiguous_remap();   ///TP: for ZONE_DMA(?), currently do nothing, if dtb has some boot commands such as early_init, may reserve DMA related memory and add it to static vm list
-	devicemaps_init(mdesc);
-	kmap_init();
+	build_mem_type_table();	///TP: depending on processor arch., adjust mem type table, for eg, smp set Shareable 
+	prepare_page_table();	///TP: clear page table except kernel image, ...
+	map_lowmem();		///TP: map lowmem(3G-4G) using memblock.memory
+	dma_contiguous_remap();	///TP: for ZONE_DMA(?), currently do nothing, if dtb has some boot commands such as early_init, may reserve DMA related memory and add it to static vm list
+	devicemaps_init(mdesc);	///TP: cp & map exception_vector, map iotable. set static_vmlist...
+	kmap_init();	///TP: alloc 2nd pt for kmap@VA:0xbfe00000
 	tcm_init();
 
 	top_pmd = pmd_off_k(0xffff0000);
