@@ -187,7 +187,8 @@ __create_page_tables:
         ///   2. loop unroll(no here)
         ///   3. compromized convection for branch penalty and code size
 1:	str	r3, [r0], #4	///TP: Q: why not use stm?, scratch register may not be enough
-	str	r3, [r0], #4	str	r3, [r0], #4
+	str	r3, [r0], #4
+	str	r3, [r0], #4
 	str	r3, [r0], #4
 	teq	r0, r6
 	bne	1b

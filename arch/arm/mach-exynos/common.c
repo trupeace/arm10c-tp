@@ -336,16 +336,16 @@ void __init exynos_init_io(void)
 {
 	debug_ll_io_init();	///TP: ifdef CONFIG_DEBUG_LL, iomap for uart address
 
-	of_scan_flat_dt(exynos_fdt_map_chipid, NULL);   ///TP: CHIPID: 0xf8000000+4kB(<-0x100)
+	of_scan_flat_dt(exynos_fdt_map_chipid, NULL);   ///TP: CHIPID: 0xf8000000++4kB(<-0x100)
 
 	/* detect cpu id and rev. */
 	s5p_init_cpu(S5P_VA_CHIPID);
 
 	s3c_init_cpu(samsung_cpu_id, cpu_ids, ARRAY_SIZE(cpu_ids));
 	///TP: alloc static_vm and 2nd pte, map to highmem, insert svm to vmlist, static_vmlist
-        /// now vmlist and static_vmlist have
-        /// SYSC:0xf6100000+64kB  TMR :0xf6300000+16kB WDT :0xf6400000+ 4kB CHID:0xf8000000+ 4kB
-        /// CMU :0xf8100000+144kB PMU :0xf8180000+64kB SRAM:0xf8400000+ 4kB ROMC:0xf84c0000+ 4kB
+	/// now vmlist and static_vmlist have
+	/// SYSC:0xf6100000++ 64kB TMR :0xf6300000++16kB WDT :0xf6400000++ 4kB CHID:0xf8000000++ 4kB
+	/// CMU :0xf8100000++144kB PMU :0xf8180000++64kB SRAM:0xf8400000++ 4kB ROMC:0xf84c0000++ 4kB
 }
 
 static void __init exynos4_map_io(void)
@@ -366,13 +366,13 @@ static void __init exynos4_map_io(void)
 static void __init exynos5_map_io(void)
 {
 	iotable_init(exynos5_iodesc, ARRAY_SIZE(exynos5_iodesc));
-	///TP: SYSC:0xf6100000+64kB
-	///TP: TMR :0xf6300000+16kB
-	///TP: WDT :0xf6400000+ 4kB
-	///TP: ROMC:0xf84c0000+ 4kB
-	///TP: SRAM:0xf8400000+ 4kB
-	///TP: CMU :0xf8100000+144kB
-	///TP: PMU :0xf8180000+64kB
+	///TP: SYSC:0xf6100000++ 64kB
+	///TP: TMR :0xf6300000++ 16kB
+	///TP: WDT :0xf6400000++  4kB
+	///TP: ROMC:0xf84c0000++  4kB
+	///TP: SRAM:0xf8400000++  4kB
+	///TP: CMU :0xf8100000++144kB
+	///TP: PMU :0xf8180000++ 64kB
 
 	if (soc_is_exynos5250())
 		iotable_init(exynos5250_iodesc, ARRAY_SIZE(exynos5250_iodesc));

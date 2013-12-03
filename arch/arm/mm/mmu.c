@@ -992,7 +992,7 @@ static int __init early_vmalloc(char *arg)
 }
 early_param("vmalloc", early_vmalloc);
 
-phys_addr_t arm_lowmem_limit __initdata = 0;
+phys_addr_t arm_lowmem_limit __initdata = 0;	///TP: 0x6f800000 set by sanity_check_meminfo()
 
 ///TP:	memory { reg = <0x20000000 0x80000000>; };
 ///               permanently mapped:  0x20000000-0x6f7f_ffff size:0x4f800000
@@ -1337,7 +1337,7 @@ void __init paging_init(const struct machine_desc *mdesc)
 
 	build_mem_type_table();	///TP: depending on processor arch., adjust mem type table, for eg, smp set Shareable 
 	prepare_page_table();	///TP: clear page table except kernel image, ...
-	map_lowmem();		///TP: map lowmem(3G-4G) using memblock.memory
+	map_lowmem();		///TP: map lowmem(3G++760MB) using memblock.memory
 	dma_contiguous_remap();	///TP: for ZONE_DMA(?), currently do nothing, if dtb has some boot commands such as early_init, may reserve DMA related memory and add it to static vm list
 	devicemaps_init(mdesc);	///TP: cp & map exception_vector, map iotable. set static_vmlist...
 	kmap_init();	///TP: alloc 2nd pt for kmap@VA:0xbfe00000

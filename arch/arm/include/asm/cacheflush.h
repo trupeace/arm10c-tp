@@ -217,8 +217,8 @@ static inline void __flush_icache_all(void)
 /*
  * Flush caches up to Level of Unification Inner Shareable
  */
+///TP: for D$, clean&invalidate to LoUIS or LoC, for I$+BP, same(LoUIS)
 #define flush_cache_louis()		__cpuc_flush_kern_louis()	///TP: v7_flush_kern_cache_louis
-
 #define flush_cache_all()		__cpuc_flush_kern_all()		///TP: v7_flush_kern_cache_all
 
 static inline void vivt_flush_cache_mm(struct mm_struct *mm)

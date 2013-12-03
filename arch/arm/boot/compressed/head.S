@@ -470,8 +470,8 @@ wont_overwrite:
 not_relocated:	mov	r0, #0
 1:		str	r0, [r2], #4		@ clear bss
 		str	r0, [r2], #4
-		str	r0, [r2], #4
-		str	r0, [r2], #4
+		str	r0, [r2], #4		///TP: since bss size is not aligned to 16B, this may overflow
+		str	r0, [r2], #4		///TP: But it is okay because the next to bss is stack
 		cmp	r2, r3
 		blo	1b
 
