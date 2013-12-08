@@ -21,21 +21,21 @@ UNWIND(	.fnend		)
 ENDPROC(\name		)
 	.endm
 
-	.macro	testop, name, instr, store
+	.macro	testop, name, instr, store	///TP: for stack unwinding op idx pos
 ENTRY(	\name		)
 UNWIND(	.fnstart	)
 	ands	ip, r1, #3
-	strneb	r1, [ip]		@ assert word-aligned
+	strneb	r1, [ip]		@ assert word-aligned	///TP: seems to generate data abort exception, for low vec, no data op allowed, for user process, no mapping
 	mov	r2, #1
-	and	r3, r0, #31		@ Get bit offset
+	and	r3, r0, #31		@ Get bit offset	///TP: r3=idx&0x1f
 	mov	r0, r0, lsr #5
-	add	r1, r1, r0, lsl #2	@ Get word offset
-	mov	r3, r2, lsl r3		@ create mask
+	add	r1, r1, r0, lsl #2	@ Get word offset	///TP: r1=&pos[(idx/32)]
+	mov	r3, r2, lsl r3		@ create mask		///TP: mask such as 0b0000100000
 	smp_dmb
 1:	ldrex	r2, [r1]
 	ands	r0, r2, r3		@ save old value of bit
 	\instr	r2, r2, r3		@ toggle bit
-	strex	ip, r2, [r1]
+	strex	ip, r2, [r1]		///TP: 0 means okay(stored) otherwise, not stored, so need to retry
 	cmp	ip, #0
 	bne	1b
 	smp_dmb
@@ -66,7 +66,7 @@ ENDPROC(\name		)
 	.endm
 
 /**
- * testop - implement a test_and_xxx_bit operation.
+ * testop - implement a test_and_xxx_bit operation.	///TP: xxx: set, clear, change
  * @instr: operational instruction
  * @store: store instruction
  *

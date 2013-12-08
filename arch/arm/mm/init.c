@@ -89,7 +89,7 @@ void __init early_init_dt_setup_initrd_arch(u64 start, u64 end)
  * initialization functions, as well as show_mem() for the skipping
  * of holes in the memory map.  It is populated by arm_add_memory().
  */
-struct meminfo meminfo;
+struct meminfo meminfo;		///TP: 2banks, normal(1), highmem(1), not merged, set by setup_arch().setup_machine_fdt().early_init_dt_scan_memory() and split by setup_arch().sanity_check_meminfo(), bank[0]=0x20000000++0x2f800000, bank[1]=0x4f800000++0x50800000, sorted by heapsort
 
 void show_mem(unsigned int filter)
 {
@@ -149,8 +149,8 @@ static void __init find_limits(unsigned long *min, unsigned long *max_low,
 	for_each_bank (i, mi)
 		if (mi->bank[i].highmem)
 				break;
-	*max_low = bank_pfn_end(&mi->bank[i - 1]);
-	*max_high = bank_pfn_end(&mi->bank[mi->nr_banks - 1]);
+	*max_low = bank_pfn_end(&mi->bank[i - 1]);		///TP: max addr of lowmem,  exynos5420: 0x4f800
+	*max_high = bank_pfn_end(&mi->bank[mi->nr_banks - 1]);	///TP: max addr of highmem, exynos5420: 0xa0000
 }
 
 static void __init arm_bootmem_init(unsigned long start_pfn,
@@ -165,9 +165,9 @@ static void __init arm_bootmem_init(unsigned long start_pfn,
 	 * Allocate the bootmem bitmap page.  This must be in a region
 	 * of memory which has already been mapped.
 	 */
-	boot_pages = bootmem_bootmap_pages(end_pfn - start_pfn);
+	boot_pages = bootmem_bootmap_pages(end_pfn - start_pfn);	///with physical lowmem pages count, get page count of bitmap, exynos5420:6
 	bitmap = memblock_alloc_base(boot_pages << PAGE_SHIFT, L1_CACHE_BYTES,
-				__pfn_to_phys(end_pfn));
+				__pfn_to_phys(end_pfn));	///TP: Q: why not use memblock_alloc()? which use memblock.current_limit as max addr
 
 	/*
 	 * Initialise the bootmem allocator, handing the
@@ -175,19 +175,19 @@ static void __init arm_bootmem_init(unsigned long start_pfn,
 	 */
 	node_set_online(0);
 	pgdat = NODE_DATA(0);
-	init_bootmem_node(pgdat, __phys_to_pfn(bitmap), start_pfn, end_pfn);
+	init_bootmem_node(pgdat, __phys_to_pfn(bitmap), start_pfn, end_pfn);	///TP: register a node as boot memory, returns 0x5f00: bitmap size in bytes 
 
 	/* Free the lowmem regions from memblock into bootmem. */
-	for_each_memblock(memory, reg) {
-		unsigned long start = memblock_region_memory_base_pfn(reg);
-		unsigned long end = memblock_region_memory_end_pfn(reg);
+	for_each_memblock(memory, reg) {	///TP: reg for region
+		unsigned long start = memblock_region_memory_base_pfn(reg);	///TP: rounding up,   0x20000
+		unsigned long end = memblock_region_memory_end_pfn(reg);	///TP: rounding down, 0xa0000
 
 		if (end >= end_pfn)
 			end = end_pfn;
 		if (start >= end)
 			break;
 
-		free_bootmem(__pfn_to_phys(start), (end - start) << PAGE_SHIFT);
+		free_bootmem(__pfn_to_phys(start), (end - start) << PAGE_SHIFT);	///TP: clear bitmap for lowmem region(0x20000000++0x2f800000)
 	}
 
 	/* Reserve the lowmem memblock reserved regions in bootmem. */
@@ -201,8 +201,9 @@ static void __init arm_bootmem_init(unsigned long start_pfn,
 			break;
 
 		reserve_bootmem(__pfn_to_phys(start),
-			        (end - start) << PAGE_SHIFT, BOOTMEM_DEFAULT);
+			        (end - start) << PAGE_SHIFT, BOOTMEM_DEFAULT);		///TP: set bitmap for reserved area(dtb, kern image, alloced pte, ...(by early_alloc()))
 	}
+
 }
 
 #ifdef CONFIG_ZONE_DMA
@@ -316,7 +317,7 @@ static void __init arm_memory_present(void)
 
 	for_each_memblock(memory, reg)
 		memory_present(0, memblock_region_memory_base_pfn(reg),
-			       memblock_region_memory_end_pfn(reg));
+			       memblock_region_memory_end_pfn(reg));	///TP: 0x20000000++0x80000000
 }
 #endif
 
@@ -396,9 +397,8 @@ void __init bootmem_init(void)
 
 	max_low = max_high = 0;
 
-	find_limits(&min, &max_low, &max_high);
-
-	arm_bootmem_init(min, max_low);
+	find_limits(&min, &max_low, &max_high);	///TP: pfn of lowmem, highmem boundary, min=0x20000, max_low=0x4f800 max_high=0xa0000
+	arm_bootmem_init(min, max_low);	///TP: build and zero-init bitmap for lowmem, set bit for reserved memblock (dtb, kern image, alloced pte, ...(by early_alloc()))
 
 	/*
 	 * Sparsemem tries to allocate bootmem in memory_present(),

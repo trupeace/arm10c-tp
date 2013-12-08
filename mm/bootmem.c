@@ -25,7 +25,7 @@
 
 #ifndef CONFIG_NEED_MULTIPLE_NODES
 struct pglist_data __refdata contig_page_data = {
-	.bdata = &bootmem_node_data[0]
+	.bdata = &bootmem_node_data[0]	///TP: struct for bitmap pointer(?)
 };
 EXPORT_SYMBOL(contig_page_data);
 #endif
@@ -34,9 +34,9 @@ unsigned long max_low_pfn;
 unsigned long min_low_pfn;
 unsigned long max_pfn;
 
-bootmem_data_t bootmem_node_data[MAX_NUMNODES] __initdata;
+bootmem_data_t bootmem_node_data[MAX_NUMNODES] __initdata;	///TP: bitmap: 0 initialized for lowmem, 1 for reserved memblock(dtb, kernel image, ...)
 
-static struct list_head bdata_list __initdata = LIST_HEAD_INIT(bdata_list);
+static struct list_head bdata_list __initdata = LIST_HEAD_INIT(bdata_list);	///TP: .next=&pgdat.bdata.list=&bootmem_node_data[0].list
 
 static int bootmem_debug;
 
@@ -56,7 +56,7 @@ early_param("bootmem_debug", bootmem_debug_setup);
 
 static unsigned long __init bootmap_bytes(unsigned long pages)
 {
-	unsigned long bytes = DIV_ROUND_UP(pages, 8);
+	unsigned long bytes = DIV_ROUND_UP(pages, 8);	///TP: 0x2f800 bits -> 0x5f00 bytes
 
 	return ALIGN(bytes, sizeof(long));
 }
@@ -69,7 +69,7 @@ unsigned long __init bootmem_bootmap_pages(unsigned long pages)
 {
 	unsigned long bytes = bootmap_bytes(pages);
 
-	return PAGE_ALIGN(bytes) >> PAGE_SHIFT;
+	return PAGE_ALIGN(bytes) >> PAGE_SHIFT;	///TP: 0x5f00 bytes = 0x6 pages
 }
 
 /*
@@ -97,7 +97,7 @@ static unsigned long __init init_bootmem_core(bootmem_data_t *bdata,
 {
 	unsigned long mapsize;
 
-	mminit_validate_memmodel_limits(&start, &end);
+	mminit_validate_memmodel_limits(&start, &end);	///TP: sanity checks not to exceed pfn limit (0x100000 for 32b addressing)
 	bdata->node_bootmem_map = phys_to_virt(PFN_PHYS(mapstart));
 	bdata->node_min_pfn = start;
 	bdata->node_low_pfn = end;
@@ -107,7 +107,7 @@ static unsigned long __init init_bootmem_core(bootmem_data_t *bdata,
 	 * Initially all pages are reserved - setup_arch() has to
 	 * register free RAM areas explicitly.
 	 */
-	mapsize = bootmap_bytes(end - start);
+	mapsize = bootmap_bytes(end - start);	///TP: 0x5f00, 6pages
 	memset(bdata->node_bootmem_map, 0xff, mapsize);
 
 	bdebug("nid=%td start=%lx map=%lx end=%lx mapsize=%lx\n",
@@ -128,7 +128,7 @@ static unsigned long __init init_bootmem_core(bootmem_data_t *bdata,
 unsigned long __init init_bootmem_node(pg_data_t *pgdat, unsigned long freepfn,
 				unsigned long startpfn, unsigned long endpfn)
 {
-	return init_bootmem_core(pgdat->bdata, freepfn, startpfn, endpfn);
+	return init_bootmem_core(pgdat->bdata, freepfn, startpfn, endpfn);	///TP:pgdat-> bdata=&bootmem_node_data[0], startpfn:0x200000, endpfn: 0x4f800
 }
 
 /**
@@ -296,7 +296,7 @@ static void __init __free(bootmem_data_t *bdata,
 		bdata->hint_idx = sidx;
 
 	for (idx = sidx; idx < eidx; idx++)
-		if (!test_and_clear_bit(idx, bdata->node_bootmem_map))
+		if (!test_and_clear_bit(idx, bdata->node_bootmem_map))		///TP: _test_and_clear_bit
 			BUG();
 }
 
@@ -340,9 +340,9 @@ static int __init mark_bootmem_node(bootmem_data_t *bdata,
 	eidx = end - bdata->node_min_pfn;
 
 	if (reserve)
-		return __reserve(bdata, sidx, eidx, flags);
+		return __reserve(bdata, sidx, eidx, flags);	///TP: set bitmap for reserved region
 	else
-		__free(bdata, sidx, eidx);
+		__free(bdata, sidx, eidx);			///TP: clear bitmap for lowmem: always clear all bit?
 	return 0;
 }
 
@@ -419,7 +419,7 @@ void __init free_bootmem(unsigned long physaddr, unsigned long size)
 	start = PFN_UP(physaddr);
 	end = PFN_DOWN(physaddr + size);
 
-	mark_bootmem(start, end, 0, 0);
+	mark_bootmem(start, end, 0, 0);		///TP: clear bitmap
 }
 
 /**
@@ -500,16 +500,16 @@ static void * __init alloc_bootmem_bdata(struct bootmem_data *bdata,
 		align, goal, limit);
 
 	BUG_ON(!size);
-	BUG_ON(align & (align - 1));
+	BUG_ON(align & (align - 1));	///TP: check align is 2's power
 	BUG_ON(limit && goal + size > limit);
 
 	if (!bdata->node_bootmem_map)
 		return NULL;
 
-	min = bdata->node_min_pfn;
+	min = bdata->node_min_pfn;	///TP; lowmem's start & end
 	max = bdata->node_low_pfn;
 
-	goal >>= PAGE_SHIFT;
+	goal >>= PAGE_SHIFT;		///TP: to pfn
 	limit >>= PAGE_SHIFT;
 
 	if (limit && max > limit)
@@ -522,10 +522,10 @@ static void * __init alloc_bootmem_bdata(struct bootmem_data *bdata,
 	if (goal && min < goal && goal < max)
 		start = ALIGN(goal, step);
 	else
-		start = ALIGN(min, step);
+		start = ALIGN(min, step);	///TP: meaningful when step is larger than page size(4kB)
 
-	sidx = start - bdata->node_min_pfn;
-	midx = max - bdata->node_min_pfn;
+	sidx = start - bdata->node_min_pfn;	///TP: start index
+	midx = max - bdata->node_min_pfn;	///TP: max index
 
 	if (bdata->hint_idx > sidx) {
 		/*
@@ -703,7 +703,7 @@ void * __init ___alloc_bootmem_node_nopanic(pg_data_t *pgdat,
 	void *ptr;
 
 	if (WARN_ON_ONCE(slab_is_available()))
-		return kzalloc(size, GFP_NOWAIT);
+		return kzalloc(size, GFP_NOWAIT);	///TP: if slab is available, print warnging message, alloc with kzalloc
 again:
 
 	/* do not panic in alloc_bootmem_bdata() */

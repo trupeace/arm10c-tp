@@ -24,7 +24,7 @@ struct mem_section *mem_section[NR_SECTION_ROOTS]
 	____cacheline_internodealigned_in_smp;
 #else
 struct mem_section mem_section[NR_SECTION_ROOTS][SECTIONS_PER_ROOT]
-	____cacheline_internodealigned_in_smp;
+	____cacheline_internodealigned_in_smp;	///TP: [1][2^9]
 #endif
 EXPORT_SYMBOL(mem_section);
 
@@ -61,7 +61,7 @@ static struct mem_section noinline __init_refok *sparse_index_alloc(int nid)
 {
 	struct mem_section *section = NULL;
 	unsigned long array_size = SECTIONS_PER_ROOT *
-				   sizeof(struct mem_section);
+				   sizeof(struct mem_section);		///TP: array_size=page_size=4kB
 
 	if (slab_is_available()) {
 		if (node_state(nid, N_HIGH_MEMORY))
@@ -77,7 +77,7 @@ static struct mem_section noinline __init_refok *sparse_index_alloc(int nid)
 
 static int __meminit sparse_index_init(unsigned long section_nr, int nid)
 {
-	unsigned long root = SECTION_NR_TO_ROOT(section_nr);
+	unsigned long root = SECTION_NR_TO_ROOT(section_nr);	///TP: root: section_nr/512, total root:4kB*512=2MB 
 	struct mem_section *section;
 
 	if (mem_section[root])
@@ -140,9 +140,9 @@ static inline int sparse_early_nid(struct mem_section *section)
 
 /* Validate the physical addressing limitations of the model */
 void __meminit mminit_validate_memmodel_limits(unsigned long *start_pfn,
-						unsigned long *end_pfn)
+						unsigned long *end_pfn)		/// clamp start_pfn, end_pfn to 0-0x100000
 {
-	unsigned long max_sparsemem_pfn = 1UL << (MAX_PHYSMEM_BITS-PAGE_SHIFT);
+	unsigned long max_sparsemem_pfn = 1UL << (MAX_PHYSMEM_BITS-PAGE_SHIFT);		///TP: 0x100000
 
 	/*
 	 * Sanity checks - do not allow an architecture to pass
@@ -169,10 +169,10 @@ void __init memory_present(int nid, unsigned long start, unsigned long end)
 {
 	unsigned long pfn;
 
-	start &= PAGE_SECTION_MASK;
-	mminit_validate_memmodel_limits(&start, &end);
-	for (pfn = start; pfn < end; pfn += PAGES_PER_SECTION) {
-		unsigned long section = pfn_to_section_nr(pfn);
+	start &= PAGE_SECTION_MASK;	///TP: 0xffff0000
+	mminit_validate_memmodel_limits(&start, &end);	///TP: clamp pfn
+	for (pfn = start; pfn < end; pfn += PAGES_PER_SECTION) {	///TP: PAGES_PER_SECTION=0x10000, pages in 256MB
+		unsigned long section = pfn_to_section_nr(pfn);		///TP: pfn>>16(28b=256MB)
 		struct mem_section *ms;
 
 		sparse_index_init(section, nid);

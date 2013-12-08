@@ -812,7 +812,7 @@ phys_addr_t __init memblock_alloc_base(phys_addr_t size, phys_addr_t align, phys
 {
 	phys_addr_t alloc;
 
-	alloc = __memblock_alloc_base(size, align, max_addr);
+	alloc = __memblock_alloc_base(size, align, max_addr);	///allocated memory(PA) under max_addr
 
 	if (alloc == 0)
 		panic("ERROR: Failed to allocate 0x%llx bytes below 0x%llx.\n",

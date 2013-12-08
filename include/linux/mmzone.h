@@ -731,7 +731,7 @@ typedef struct pglist_data {
 #endif
 #endif
 #ifndef CONFIG_NO_BOOTMEM
-	struct bootmem_data *bdata;
+	struct bootmem_data *bdata;	///TP: array for each nodes, &bootmem_node_data[0]
 #endif
 #ifdef CONFIG_MEMORY_HOTPLUG
 	/*
@@ -1061,13 +1061,13 @@ static inline unsigned long early_pfn_to_nid(unsigned long pfn)
  * PA_SECTION_SHIFT		physical address to/from section number
  * PFN_SECTION_SHIFT		pfn to/from section number
  */
-#define PA_SECTION_SHIFT	(SECTION_SIZE_BITS)
-#define PFN_SECTION_SHIFT	(SECTION_SIZE_BITS - PAGE_SHIFT)
+#define PA_SECTION_SHIFT	(SECTION_SIZE_BITS)		//TP: 28 for 256MB
+#define PFN_SECTION_SHIFT	(SECTION_SIZE_BITS - PAGE_SHIFT)	///TP: 28-12
 
 #define NR_MEM_SECTIONS		(1UL << SECTIONS_SHIFT)
 
-#define PAGES_PER_SECTION       (1UL << PFN_SECTION_SHIFT)
-#define PAGE_SECTION_MASK	(~(PAGES_PER_SECTION-1))
+#define PAGES_PER_SECTION       (1UL << PFN_SECTION_SHIFT)	///TP: 0x10000, pages in 256MB, determined by page size and root(256MB) number
+#define PAGE_SECTION_MASK	(~(PAGES_PER_SECTION-1))	///TP: 0xffff0000
 
 #define SECTION_BLOCKFLAGS_BITS \
 	((1UL << (PFN_SECTION_SHIFT - pageblock_order)) * NR_PAGEBLOCK_BITS)
@@ -1116,13 +1116,13 @@ struct mem_section {
 };
 
 #ifdef CONFIG_SPARSEMEM_EXTREME
-#define SECTIONS_PER_ROOT       (PAGE_SIZE / sizeof (struct mem_section))
+#define SECTIONS_PER_ROOT       (PAGE_SIZE / sizeof (struct mem_section))	///TP: 4kB/sizeof(mem_section)=4kB/8B=512
 #else
 #define SECTIONS_PER_ROOT	1
 #endif
 
 #define SECTION_NR_TO_ROOT(sec)	((sec) / SECTIONS_PER_ROOT)
-#define NR_SECTION_ROOTS	DIV_ROUND_UP(NR_MEM_SECTIONS, SECTIONS_PER_ROOT)
+#define NR_SECTION_ROOTS	DIV_ROUND_UP(NR_MEM_SECTIONS, SECTIONS_PER_ROOT)	///TP: DIV_ROUND_UP(0x10,0x200)
 #define SECTION_ROOT_MASK	(SECTIONS_PER_ROOT - 1)
 
 #ifdef CONFIG_SPARSEMEM_EXTREME

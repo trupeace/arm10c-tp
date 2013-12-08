@@ -45,7 +45,7 @@ ENDPROC(_find_first_zero_bit_le)
 ENTRY(_find_next_zero_bit_le)
 		teq	r1, #0
 		beq	3b
-		ands	ip, r2, #7
+		ands	ip, r2, #7		///bit offset in byte
 		beq	1b			@ If new byte, goto old routine
  ARM(		ldrb	r3, [r0, r2, lsr #3]	)
  THUMB(		lsr	r3, r2, #3		)
@@ -174,9 +174,9 @@ ENDPROC(_find_next_bit_be)
  */
 .L_found:
 #if __LINUX_ARM_ARCH__ >= 5
-		rsb	r0, r3, #0
-		and	r3, r3, r0
-		clz	r3, r3
+		rsb	r0, r3, #0	///TP: reverse subtract, r3 is free(1), reserve(0)
+		and	r3, r3, r0	///TP: r3&(0-r3)=r3&(
+		clz	r3, r3		///TP: count leading zero
 		rsb	r3, r3, #31
 		add	r0, r2, r3
 #else

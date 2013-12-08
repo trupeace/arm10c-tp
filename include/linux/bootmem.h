@@ -25,9 +25,9 @@ extern unsigned long max_pfn;
  * memory pages (including holes) on the node.
  */
 typedef struct bootmem_data {
-	unsigned long node_min_pfn;
-	unsigned long node_low_pfn;
-	void *node_bootmem_map;
+	unsigned long node_min_pfn;	///TP: [0].node_min_pfn=0x20000
+	unsigned long node_low_pfn;	///TP: [0].node_low_pfn=0x4f800
+	void *node_bootmem_map;		///TP: pointer of bitmap, alloc by memblock_alloc_base(), initialized to all 1s
 	unsigned long last_end_off;
 	unsigned long hint_idx;
 	struct list_head list;
@@ -125,7 +125,7 @@ extern void *__alloc_bootmem_low_node(pg_data_t *pgdat,
 #define alloc_bootmem_pages_nopanic(x) \
 	__alloc_bootmem_nopanic(x, PAGE_SIZE, BOOTMEM_LOW_LIMIT)
 #define alloc_bootmem_node(pgdat, x) \
-	__alloc_bootmem_node(pgdat, x, SMP_CACHE_BYTES, BOOTMEM_LOW_LIMIT)
+	__alloc_bootmem_node(pgdat, x, SMP_CACHE_BYTES, BOOTMEM_LOW_LIMIT)	///TP: (pgdat,x,64B,0x5fffffff(=__pa(0xffffffff)))
 #define alloc_bootmem_node_nopanic(pgdat, x) \
 	__alloc_bootmem_node_nopanic(pgdat, x, SMP_CACHE_BYTES, BOOTMEM_LOW_LIMIT)
 #define alloc_bootmem_pages_node(pgdat, x) \
