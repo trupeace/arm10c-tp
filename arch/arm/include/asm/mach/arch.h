@@ -65,7 +65,7 @@ struct machine_desc {
 /*
  * Current machine - only accessible during boot.
  */
-extern const struct machine_desc *machine_desc;
+extern const struct machine_desc *machine_desc;		///TP: best matched machine_desc * in .arch.info.init section, refer to DT_MACHINE_START() arch/arm/mach-exynos/mach-exynos5-dt.c, set by setup_arch()
 
 /*
  * Machine type table - also only accessible during boot

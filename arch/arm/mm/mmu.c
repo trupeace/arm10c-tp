@@ -995,8 +995,8 @@ early_param("vmalloc", early_vmalloc);
 phys_addr_t arm_lowmem_limit __initdata = 0;	///TP: 0x6f800000 set by sanity_check_meminfo()
 
 ///TP:	memory { reg = <0x20000000 0x80000000>; };
-///               permanently mapped:  0x20000000-0x6f7f_ffff size:0x4f800000
-/// (high memory) virtually   mapped:  0x6f800000-0x9fff_ffff size:0x30800000
+///               permanently mapped:  0x20000000++0x2f800000(760MB)
+/// (high memory) virtually   mapped:  0x4f800000++0x50800000
 /// managing high memory. Do not confuse malloc setup
 void __init sanity_check_meminfo(void)
 {
@@ -1032,8 +1032,8 @@ void __init sanity_check_meminfo(void)
 					(meminfo.nr_banks - i) * sizeof(*bank));
 				meminfo.nr_banks++;
 				i++;
-				bank[1].size -= size_limit;     ///TP: bank.size or 0x30800000
-				bank[1].start = vmalloc_limit;  ///TP: 0x6f800000
+				bank[1].size -= size_limit;     ///TP: bank.size or 0x50800000
+				bank[1].start = vmalloc_limit;  ///TP: 0x4f800000
 				bank[1].highmem = highmem = 1;
 				j++;
 			}
@@ -1340,7 +1340,7 @@ void __init paging_init(const struct machine_desc *mdesc)
 	map_lowmem();		///TP: map lowmem(3G++760MB) using memblock.memory
 	dma_contiguous_remap();	///TP: for ZONE_DMA(?), currently do nothing, if dtb has some boot commands such as early_init, may reserve DMA related memory and add it to static vm list
 	devicemaps_init(mdesc);	///TP: cp & map exception_vector, map iotable. set static_vmlist...
-	kmap_init();	///TP: alloc 2nd pt for kmap@VA:0xbfe00000
+	kmap_init();		///TP: alloc 2nd pt for kmap@VA:0xbfe00000
 	tcm_init();
 
 	top_pmd = pmd_off_k(0xffff0000);

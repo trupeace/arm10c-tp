@@ -1,0 +1,74 @@
+reference: http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html
+1. About this document
+  "new" booting procedure
+    >=2.4.18
+  legacy "struct" method not used
+
+2. Other bootloaders
+  U-Boot, Bootldr(GPL, Non-GPL), Blob(GPL, SA11x0), 
+  Redboot(eCos license), ABLE(commercial)
+
+3. Overview
+  ARM Linux minimal requirements are
+    configure the memory
+    Load the kernel image
+    Optional initrd
+    init. boot param.
+    Obtain machine type
+    enter kernel 
+
+4. Configuring the system's memory
+  ATAG_MEM, multiple ATAG_MEM possible,
+  'mem=<size>[KM],@<phys_offset>'   ref: linux/Documentation/kernel-parameters.txt
+
+5. Loading the kernel image
+  kernel image: zImage or Image
+  zImage is preferred, 
+    readily identifiable magic number
+    size info
+-------------------------------------------------------------------------------
+|  Offset |                 | 
+|   into  |                 |
+|  zImage | Value           |  Description
+-------------------------------------------------------------------------------
+|   0x24  | 0x016F2818      | Magic number used to identify this is an ARM Linux zImage
+|   0x28  | start address   | The address the zImage starts at
+|   0x2C  | end address     | The address the zImage ends at
+-------------------------------------------------------------------------------
+  4MB limitation
+
+6. Loading an initial RAM disk
+initrd: root file system and programs
+  ref: linux/Documentation/initrd.txt
+  1. appended to zImage (4MB limitation)
+  2. bootloader place inird and ATAG_INITRD2 and ATAG_RAMDISK to kernel
+      normally 8MB offset from physical memory base
+      within a single memory regino
+      4kB page boundary aligned
+      not zImage conflict(overwrite)
+
+7. Initializing a console
+  commonly video frambuffer driver or a serial driver(ARM systems almost always provide serial)
+  automatically detect or bootloader pass 'console=' option
+
+8 Kernel parameters (ATAGS)
+  atag location recommendation: the first 16KiB of RAM, usually the start of physical RAM plus 0x100 (which avoids zero page exception vectors).
+  atag address in R2 on entry to kernel
+    in the past, not mandatory, ram_base+0x100
+  not over 0x4000 boundary
+  4B alignment
+  begin with ATAG_CORE and end with ATAG_NONE
+  at least 1 ATAG_MEM
+  ATAG_CORE: optional data (2 words or 5 words)
+
+
+9. Obtaining the ARM Linux machine type
+  MACH_TYPE defined in linux/arch/arm/tools/mach-types
+
+10. Starting the kernel
+  the entry requirements are
+    CUP in SVC mode, FI
+    MMU off
+    data cache off
+    instruction on/off
+    r0=0, r1=MACH_TYPE, r2: atag address

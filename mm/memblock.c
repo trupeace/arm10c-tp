@@ -24,18 +24,18 @@ static struct memblock_region memblock_memory_init_regions[INIT_MEMBLOCK_REGIONS
 static struct memblock_region memblock_reserved_init_regions[INIT_MEMBLOCK_REGIONS] __initdata_memblock;
 
 ///TP:
-/// bank0: 0x20000000, 0x4f800000, normal
-/// bank1: 0x6f800000, 0x30800000, highmem
+/// bank0: 0x20000000, 0x2f800000, normal
+/// bank1: 0x4f800000, 0x50800000, highmem
 struct memblock memblock __initdata_memblock = {
-	.memory.regions		= memblock_memory_init_regions,     ///TP: physical memory bank(neighboring region merged), exynos5420 has 1 region such as 0x80000000@0x40000000
+	.memory.regions		= memblock_memory_init_regions,	///TP: physical memory bank(neighboring region merged), exynos5420 has 1 region such as 0x80000000@0x20000000
 	.memory.cnt		= 1,	/* empty dummy entry */
 	.memory.max		= INIT_MEMBLOCK_REGIONS,
 
-	.reserved.regions	= memblock_reserved_init_regions,   ///TP: reserved such as Kernel (base:_stext)
+	.reserved.regions	= memblock_reserved_init_regions,	///TP: reserved such as Kernel (base:_stext)
 	.reserved.cnt		= 1,	/* empty dummy entry */
 	.reserved.max		= INIT_MEMBLOCK_REGIONS,
 
-	.current_limit		= MEMBLOCK_ALLOC_ANYWHERE,  ///TP: 0x6f800000 by sanity_check_meminfo()
+	.current_limit		= MEMBLOCK_ALLOC_ANYWHERE,	///TP: 0x4f800000 by sanity_check_meminfo()
 };
 
 int memblock_debug __initdata_memblock;

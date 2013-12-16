@@ -433,8 +433,8 @@ void of_fdt_unflatten_tree(unsigned long *blob,
 EXPORT_SYMBOL_GPL(of_fdt_unflatten_tree);
 
 /* Everything below here references initial_boot_params directly. */
-int __initdata dt_root_addr_cells;    ///TP: updated by early_init_dt_scan_root()
-int __initdata dt_root_size_cells;
+int __initdata dt_root_addr_cells;	///TP: 1(32bit) set by setup_arch().setup_machine_fdt().early_init_dt_scan_root()
+int __initdata dt_root_size_cells;	///TP: 1(32bit) 
 
 struct boot_param_header *initial_boot_params;
 

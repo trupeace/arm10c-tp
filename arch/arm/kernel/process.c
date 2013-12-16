@@ -44,7 +44,7 @@
 
 #ifdef CONFIG_CC_STACKPROTECTOR
 #include <linux/stackprotector.h>
-unsigned long __stack_chk_guard __read_mostly;
+unsigned long __stack_chk_guard __read_mostly;	///TP: current->stack_canary, set by boot_init_stack_canary()
 EXPORT_SYMBOL(__stack_chk_guard);
 #endif
 

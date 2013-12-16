@@ -16,7 +16,7 @@
  *  This allows for a much quicker boot time.
  */
 
-unsigned int __machine_arch_type;
+unsigned int __machine_arch_type;   ///for DT case, 0xffffffff, set by setup_arch().setup_machine_fdt() 
 
 #include <linux/compiler.h>	/* for inline */
 #include <linux/types.h>

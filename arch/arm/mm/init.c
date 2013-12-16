@@ -167,13 +167,13 @@ static void __init arm_bootmem_init(unsigned long start_pfn,
 	 */
 	boot_pages = bootmem_bootmap_pages(end_pfn - start_pfn);	///with physical lowmem pages count, get page count of bitmap, exynos5420:6
 	bitmap = memblock_alloc_base(boot_pages << PAGE_SHIFT, L1_CACHE_BYTES,
-				__pfn_to_phys(end_pfn));	///TP: Q: why not use memblock_alloc()? which use memblock.current_limit as max addr
+				__pfn_to_phys(end_pfn));	///TP: Q: why not use memblock_alloc()? which use memblock.current_limit as max addr, A: memblock.current_limit must be section aligned, bank_end can be not section aligned(page aligned)
 
 	/*
 	 * Initialise the bootmem allocator, handing the
 	 * memory banks over to bootmem.
 	 */
-	node_set_online(0);
+	node_set_online(0);	///TP: for multi node, set bit in node bitmap
 	pgdat = NODE_DATA(0);
 	init_bootmem_node(pgdat, __phys_to_pfn(bitmap), start_pfn, end_pfn);	///TP: register a node as boot memory, returns 0x5f00: bitmap size in bytes 
 
@@ -397,7 +397,7 @@ void __init bootmem_init(void)
 
 	max_low = max_high = 0;
 
-	find_limits(&min, &max_low, &max_high);	///TP: pfn of lowmem, highmem boundary, min=0x20000, max_low=0x4f800 max_high=0xa0000
+	find_limits(&min, &max_low, &max_high);	///TP: set pfn of lowmem, highmem boundary using meminfo, min=0x20000, max_low=0x4f800 max_high=0xa0000
 	arm_bootmem_init(min, max_low);	///TP: build and zero-init bitmap for lowmem, set bit for reserved memblock (dtb, kern image, alloced pte, ...(by early_alloc()))
 
 	/*

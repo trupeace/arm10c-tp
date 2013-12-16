@@ -127,7 +127,7 @@ void (*__initdata late_time_init)(void);
 extern void softirq_init(void);
 
 /* Untouched command line saved by arch-specific code. */
-char __initdata boot_command_line[COMMAND_LINE_SIZE];
+char __initdata boot_command_line[COMMAND_LINE_SIZE];	///TP: dts.chosen.bootargs "console=ttySAC2,115200 init=/linuxrc" set by setup_arch().setup_machine_fdt().early_init_dt_scan_chosen()
 /* Untouched saved command line (eg. for /proc) */
 char *saved_command_line;
 /* Command line for parameter parsing */
@@ -394,10 +394,10 @@ static noinline void __init_refok rest_init(void)
 
 /* Check for early params. */
 static int __init do_early_param(char *param, char *val, const char *unused)
-{ ///TP: param("console"), val("ttySAC2,115200"), "early options"
+{	///TP: param("console"), val("ttySAC2,115200"), "early options"
 	const struct obs_kernel_param *p;
 
-  ///early_param("earlycon", setup_early_serial8250_console); => __setup_param(str, fn, fn, 1)
+	///early_param("earlycon", setup_early_serial8250_console); => __setup_param(str, fn, fn, 1)
 	for (p = __setup_start; p < __setup_end; p++) {
 		if ((p->early && parameq(param, p->str)) ||     ///TP: no ealry for param "init" => bypass init
 		    (strcmp(param, "console") == 0 &&
@@ -437,12 +437,12 @@ void __init parse_early_param(void)
 
 static void __init boot_cpu_init(void)
 {
-	int cpu = smp_processor_id();
+	int cpu = smp_processor_id();	///TP: initially current_thread_info()->cpu=0
 	/* Mark the boot cpu "present", "online" etc for SMP and UP case */
-	set_cpu_online(cpu, true);    ///TP: cpu exists and scheduler manage it   no hotplugging-> online = active
-	set_cpu_active(cpu, true);    ///TP: cpu exists and can be used when task migration
-	set_cpu_present(cpu, true);   ///TP: cpu exists,    no hotplugging-> present = possible
-	set_cpu_possible(cpu, true);  ///TP: cpu may exists
+	set_cpu_online(cpu, true);	///TP: cpu exists and scheduler manage it. no hotplugging--> online = active
+	set_cpu_active(cpu, true);	///TP: cpu exists and can be used when task migration
+	set_cpu_present(cpu, true);	///TP: cpu exists. no hotplugging--> present = possible
+	set_cpu_possible(cpu, true);	///TP: cpu may exists
 }
 
 void __init __weak smp_setup_processor_id(void)
@@ -481,29 +481,28 @@ asmlinkage void __init start_kernel(void)
 	 * Need to run as early as possible, to initialize the
 	 * lockdep hash:
 	 */
-	lockdep_init();
-	smp_setup_processor_id();
-	debug_objects_early_init();
+	lockdep_init();			///TP: init hash related lists such as classhash_table, chainhash_table  
+	smp_setup_processor_id();	///TP: fill cpu_logical_map[], 
+	debug_objects_early_init();	///TP: init hash buckets and static object pool list; spinlock structure & obj_pool list, object tracker is operational
 
 	/*
 	 * Set up the the initial canary ASAP:
 	 */
-	boot_init_stack_canary();
+	boot_init_stack_canary();	///TP: set canary value for stack protection, only when CONFIG_CC_STACKPROTECTOR
 
-	cgroup_init_early();
+	cgroup_init_early();	///TP: init cgroups; init lists in init_css_set when CONFIG_CGROUPS 
 
-	local_irq_disable();
+	local_irq_disable();	///TP: may use "cpsid i" or mrs/msr
 	early_boot_irqs_disabled = true;
 
 /*
  * Interrupts are still disabled. Do necessary setups, then
  * enable them
  */
-	///TP: set bit current_thread_info()->cpu in possible, present, active, onine cpu bit field
-	boot_cpu_init();
-	page_address_init();
-	pr_notice("%s", linux_banner);
-	setup_arch(&command_line);
+	boot_cpu_init();	///TP: set bit current_thread_info()->cpu in possible, present, active, onine cpu bitmap
+	page_address_init();	///TP: init list head of page_address_htable[].lh list, init spin lock of page_address_htable[].lock
+	pr_notice("%s", linux_banner);	///TP: print linux banner "Linux version 3.12.0-00012-g4abc29e-dirty"...
+	setup_arch(&command_line);	///TP: command_line=cmd_line
 	mm_init_owner(&init_mm, &init_task);
 	mm_init_cpumask(&init_mm);
 	setup_command_line(command_line);

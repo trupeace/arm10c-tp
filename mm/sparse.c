@@ -77,7 +77,7 @@ static struct mem_section noinline __init_refok *sparse_index_alloc(int nid)
 
 static int __meminit sparse_index_init(unsigned long section_nr, int nid)
 {
-	unsigned long root = SECTION_NR_TO_ROOT(section_nr);	///TP: root: section_nr/512, total root:4kB*512=2MB 
+	unsigned long root = SECTION_NR_TO_ROOT(section_nr);	///TP: root: section_nr/512, root covers 512 mem setctions 4kB/8
 	struct mem_section *section;
 
 	if (mem_section[root])

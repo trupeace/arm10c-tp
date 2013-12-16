@@ -81,7 +81,7 @@ unsigned int processor_id;
 EXPORT_SYMBOL(processor_id);
 unsigned int __machine_arch_type __read_mostly;
 EXPORT_SYMBOL(__machine_arch_type);
-unsigned int cacheid __read_mostly;
+unsigned int cacheid __read_mostly;	///TP: CACHEID_VIPT_NONALIASING | CACHEID_PIPT, set by setup_arch().setup_processor().cacheid_init()
 EXPORT_SYMBOL(cacheid);
 
 unsigned int __atags_pointer __initdata;
@@ -95,12 +95,12 @@ EXPORT_SYMBOL(system_serial_low);
 unsigned int system_serial_high;
 EXPORT_SYMBOL(system_serial_high);
 
-unsigned int elf_hwcap __read_mostly;
+unsigned int elf_hwcap __read_mostly;	///TP: HWCAP_SWP | HWCAP_HALF | HWCAP_THUMB | HWCAP_FAST_MULT | HWCAP_EDSP | HWCAP_TLS | HWCAP_IDIVA | HWCAP_IDIVT | \hwcaps(0), set by setup_arch().setup_processor()
 EXPORT_SYMBOL(elf_hwcap);
 
 
 #ifdef MULTI_CPU
-struct processor processor __read_mostly;	///TP: v7_processor_functions, set by setup_processor(), functions defined in arch/arm/mm/proc-v7.S
+struct processor processor __read_mostly;	///TP: v7_processor_functions, set by setup_processor(), functions defined by macro define_processor_functions in arch/arm/mm/proc-v7.S
 #endif
 #ifdef MULTI_TLB
 struct cpu_tlb_fns cpu_tlb __read_mostly;	///TP: v7wbi_tlb_fns
@@ -140,7 +140,7 @@ EXPORT_SYMBOL(elf_platform);
 static const char *cpu_name;	///TP: pointer of "ARMv7 Processor" in proc-v7.S
 static const char *machine_name;
 static char __initdata cmd_line[COMMAND_LINE_SIZE];
-const struct machine_desc *machine_desc __initdata;
+const struct machine_desc *machine_desc __initdata;	///TP: "SAMSUNG EXYNOS5 (Flattened Device Tree)" set by setup_arch()
 
 ///TP: depending on endian, lsb returns 'l' or 'b'
 static union { char c[4]; unsigned long l; } endian_test __initdata = { { 'l', '?', '?', 'b' } };
@@ -318,7 +318,7 @@ static void __init cacheid_init(void)
 				cacheid |= CACHEID_ASID_TAGGED;
 				break;
 			case (3 << 14):
-				cacheid |= CACHEID_PIPT;	///TP: CA15
+				cacheid |= CACHEID_PIPT;	///TP: CA15, cacheid = CACHEID_VIPT_NONALIASING | CACHEID_PIPT
 				break;
 			}
 		} else {
@@ -425,9 +425,9 @@ void notrace cpu_init(void)
 	 * This only works on resume and secondary cores. For booting on the
 	 * boot cpu, smp_prepare_boot_cpu is called after percpu area setup.
 	 */
-	set_my_cpu_offset(per_cpu_offset(cpu));
+	set_my_cpu_offset(per_cpu_offset(cpu));	///TP: Set TPIDRPRW
 
-	cpu_proc_init();
+	cpu_proc_init();	///TP: cpu_v7_proc_init, do nothing
 
 	/*
 	 * Define the placement constraint for the inline asm directive below.
@@ -595,7 +595,7 @@ static void __init setup_processor(void)
 		 list->arch_name, ENDIANNESS);	///TP: "armv7[lb]"
 	snprintf(elf_platform, ELF_PLATFORM_SIZE, "%s%c",
 		 list->elf_name, ENDIANNESS);	///TP: "V7"
-	elf_hwcap = list->elf_hwcap;		///TP: .long	HWCAP_SWP | HWCAP_HALF | HWCAP_THUMB | HWCAP_FAST_MULT | HWCAP_EDSP | HWCAP_TLS | \hwcaps
+	elf_hwcap = list->elf_hwcap;		///TP: .long	HWCAP_SWP | HWCAP_HALF | HWCAP_THUMB | HWCAP_FAST_MULT | HWCAP_EDSP | HWCAP_TLS | \hwcaps(0)
 
 	cpuid_init_hwcaps();
 
@@ -605,8 +605,8 @@ static void __init setup_processor(void)
 
 	feat_v6_fixup();	///TP: Main ID 0x410fc0f0
 
-	cacheid_init();
-	cpu_init();
+	cacheid_init();	///TP: set cacheid 
+	cpu_init();	///TP; setup stack for each cpu
 }
 
 void __init dump_machine_table(void)
@@ -858,11 +858,11 @@ void __init setup_arch(char **cmdline_p)
 {
 	const struct machine_desc *mdesc;
 
-	setup_processor();
+	setup_processor();	///TP: get cpuinfo using lookup_processor_type() and set processor, cpu_tlb, cpu_user, cpu_cache, elf_hwcap, cacheid, stack...
 	mdesc = setup_machine_fdt(__atags_pointer);	///TP: setup model, boot_command_line(bootargs in dtb), memory
-	///TP: now mdesc = best matched machine_desc * in .arch.info.init section, refer to arch/arm/mach-exynos/mach-exynos5-dt.c
+	///TP: now mdesc = best matched machine_desc * in .arch.info.init section, refer to DT_MACHINE_START() arch/arm/mach-exynos/mach-exynos5-dt.c
 	if (!mdesc)
-		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);
+		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);	//if no dtb, use atags
 	machine_desc = mdesc;
 	machine_name = mdesc->name;
 
@@ -876,15 +876,14 @@ void __init setup_arch(char **cmdline_p)
 	init_mm.end_data   = (unsigned long) _edata;
 	init_mm.brk	   = (unsigned long) _end;
 
-	///TP: 20131017
 	/* populate cmd_line too for later use, preserving boot_command_line */
 	strlcpy(cmd_line, boot_command_line, COMMAND_LINE_SIZE);
 	*cmdline_p = cmd_line;		///TP: setup_arch parameter
 
-	parse_early_param();
+	parse_early_param();	///TP run early init when bootargs have "console" or any "ealrycon" is declared using __setup() or early_param() macros
 
 	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);	///TP: lib/sort.c, heapsort, sort meminfo.bank[] by start pfn(page frame number) address is full range unsigned 32b, which makes 32b compare fail, thus use pfn!!!
-	sanity_check_meminfo();
+	sanity_check_meminfo();		///TP: split meminfo to lowmem & highmem
 	arm_memblock_init(&meminfo, mdesc);	///TP: refering meminfo, init memblock.memory and reserve memblock.reserved for kernel, dtb, DMA, video buffer, ...
 
 	paging_init(mdesc);

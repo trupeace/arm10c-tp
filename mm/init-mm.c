@@ -22,4 +22,4 @@ struct mm_struct init_mm = {
 	.page_table_lock =  __SPIN_LOCK_UNLOCKED(init_mm.page_table_lock),
 	.mmlist		= LIST_HEAD_INIT(init_mm.mmlist),
 	INIT_MM_CONTEXT(init_mm)
-};
+};	///TP: .start_code=_text,init_mm.end_code=_etext,init_mm.end_data=_edata,init_mm.brk=_end by setup_arch()
