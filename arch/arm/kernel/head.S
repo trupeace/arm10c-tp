@@ -95,7 +95,7 @@ ENTRY(stext)		///TP: .global and .align in include/linux/linkage.h
 	bl	__hyp_stub_install	///TP: when cpu in hyp mode, configure hyp_stub
 #endif
 	@ ensure svc mode and all interrupts masked
-	safe_svcmode_maskall r9		///TP: set cpu mode to hyp, if in hyp mode, use ELR, ERET, spsr otherwise, just use msr
+	safe_svcmode_maskall r9		///TP: set cpu mode to svc, if in hyp mode, use ELR, ERET, spsr otherwise, just use msr
 
 	mrc	p15, 0, r9, c0, c0		@ get processor id
 	bl	__lookup_processor_type		@ r5=procinfo r9=cpuid	///TP: return r5 = the pointer(PA) of the matched proc_info_list 

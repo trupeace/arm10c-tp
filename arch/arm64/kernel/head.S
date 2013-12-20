@@ -39,7 +39,7 @@
  * the page tables 3 * PAGE_SIZE below KERNEL_RAM_VADDR. The idmap_pg_dir has
  * 2 pages and is placed below swapper_pg_dir.
  */
-#define KERNEL_RAM_VADDR	(PAGE_OFFSET + TEXT_OFFSET)
+#define KERNEL_RAM_VADDR	(PAGE_OFFSET + TEXT_OFFSET)	///TP: 0xffffffc0_00080000, assumption: not use 64kB page
 
 #if (KERNEL_RAM_VADDR & 0xfffff) != 0x80000
 #error KERNEL_RAM_VADDR must start at 0xXXX80000
@@ -49,10 +49,10 @@
 #define IDMAP_DIR_SIZE		(2 * PAGE_SIZE)
 
 	.globl	swapper_pg_dir
-	.equ	swapper_pg_dir, KERNEL_RAM_VADDR - SWAPPER_DIR_SIZE
+	.equ	swapper_pg_dir, KERNEL_RAM_VADDR - SWAPPER_DIR_SIZE	///TP: 0xffffffc0_0007d000
 
 	.globl	idmap_pg_dir
-	.equ	idmap_pg_dir, swapper_pg_dir - IDMAP_DIR_SIZE
+	.equ	idmap_pg_dir, swapper_pg_dir - IDMAP_DIR_SIZE		///TP: 0xffffffc0_0007b000
 
 	.macro	pgtbl, ttb0, ttb1, phys
 	add	\ttb1, \phys, #TEXT_OFFSET - SWAPPER_DIR_SIZE
@@ -109,7 +109,7 @@
 	 */
 	b	stext				// branch to kernel start, magic
 	.long	0				// reserved
-	.quad	TEXT_OFFSET			// Image load offset from start of RAM
+	.quad	TEXT_OFFSET			// Image load offset from start of RAM	///TP: .quad for 64b
 	.quad	0				// reserved
 	.quad	0				// reserved
 	.quad	0				// reserved
