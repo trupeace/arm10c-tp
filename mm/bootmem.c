@@ -34,7 +34,7 @@ unsigned long max_low_pfn;
 unsigned long min_low_pfn;
 unsigned long max_pfn;
 
-bootmem_data_t bootmem_node_data[MAX_NUMNODES] __initdata;	///TP: bitmap: 0 initialized for lowmem, 1 for reserved memblock(dtb, kernel image, ...)
+bootmem_data_t bootmem_node_data[MAX_NUMNODES] __initdata;	///TP: bitmap: 0-initialized for lowmem, 1 for reserved memblock(dtb, kernel image, ...)
 
 static struct list_head bdata_list __initdata = LIST_HEAD_INIT(bdata_list);	///TP: .next=&pgdat.bdata.list=&bootmem_node_data[0].list
 
@@ -128,7 +128,7 @@ static unsigned long __init init_bootmem_core(bootmem_data_t *bdata,
 unsigned long __init init_bootmem_node(pg_data_t *pgdat, unsigned long freepfn,
 				unsigned long startpfn, unsigned long endpfn)
 {
-	return init_bootmem_core(pgdat->bdata, freepfn, startpfn, endpfn);	///TP:pgdat-> bdata=&bootmem_node_data[0], startpfn:0x200000, endpfn: 0x4f800
+	return init_bootmem_core(pgdat->bdata, freepfn, startpfn, endpfn);	///TP: pgdat->bdata=&bootmem_node_data[0], startpfn:0x20000, endpfn: 0x4f800
 }
 
 /**
@@ -414,7 +414,7 @@ void __init free_bootmem(unsigned long physaddr, unsigned long size)
 {
 	unsigned long start, end;
 
-	kmemleak_free_part(__va(physaddr), size);
+	kmemleak_free_part(__va(physaddr), size);	///TP: for debug
 
 	start = PFN_UP(physaddr);
 	end = PFN_DOWN(physaddr + size);
@@ -503,7 +503,7 @@ static void * __init alloc_bootmem_bdata(struct bootmem_data *bdata,
 	BUG_ON(align & (align - 1));	///TP: check align is 2's power
 	BUG_ON(limit && goal + size > limit);
 
-	if (!bdata->node_bootmem_map)
+	if (!bdata->node_bootmem_map)	///TP: check bitmap ptr is valid
 		return NULL;
 
 	min = bdata->node_min_pfn;	///TP; lowmem's start & end
@@ -524,7 +524,7 @@ static void * __init alloc_bootmem_bdata(struct bootmem_data *bdata,
 	else
 		start = ALIGN(min, step);	///TP: meaningful when step is larger than page size(4kB)
 
-	sidx = start - bdata->node_min_pfn;	///TP: start index
+	sidx = start - bdata->node_min_pfn;	///TP: start index, if goal is in range, sidx!=0, otherwise sidx=0
 	midx = max - bdata->node_min_pfn;	///TP: max index
 
 	if (bdata->hint_idx > sidx) {
@@ -710,14 +710,16 @@ again:
 	if (limit && goal + size > limit)
 		limit = 0;
 
-	ptr = alloc_bootmem_bdata(pgdat->bdata, size, align, goal, limit);
+	ptr = alloc_bootmem_bdata(pgdat->bdata, size, align, goal, limit);	///TP: ptr: start va of allocated region, pgdat->bdata=&bootmem_node_data[0]
 	if (ptr)
 		return ptr;
 
+	///TP: when failed, try all the bdata list
 	ptr = alloc_bootmem_core(size, align, goal, limit);
 	if (ptr)
 		return ptr;
 
+	///TP: when failed, ignore goal
 	if (goal) {
 		goal = 0;
 		goto again;
@@ -741,7 +743,7 @@ void * __init ___alloc_bootmem_node(pg_data_t *pgdat, unsigned long size,
 {
 	void *ptr;
 
-	ptr = ___alloc_bootmem_node_nopanic(pgdat, size, align, goal, 0);
+	ptr = ___alloc_bootmem_node_nopanic(pgdat, size, align, goal, 0);	///TP: Q: 0 seems to be limit
 	if (ptr)
 		return ptr;
 

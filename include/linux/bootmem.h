@@ -27,9 +27,9 @@ extern unsigned long max_pfn;
 typedef struct bootmem_data {
 	unsigned long node_min_pfn;	///TP: [0].node_min_pfn=0x20000
 	unsigned long node_low_pfn;	///TP: [0].node_low_pfn=0x4f800
-	void *node_bootmem_map;		///TP: pointer of bitmap, alloc by memblock_alloc_base(), initialized to all 1s
-	unsigned long last_end_off;
-	unsigned long hint_idx;
+	void *node_bootmem_map;		///TP: pointer of bitmap, alloc by memblock_alloc_base(), initialized to all 1s (1 means reserved(not free)
+	unsigned long last_end_off;	///TP: bytes offset
+	unsigned long hint_idx;		///TP: page aligned last end idx, PFN_UP(last_end_off), when free only hint_idx changed, not last_end_off
 	struct list_head list;
 } bootmem_data_t;
 

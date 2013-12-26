@@ -586,14 +586,14 @@ EXPORT_SYMBOL(phys_mem_access_prot);
 
 static void __init *early_alloc_aligned(unsigned long sz, unsigned long align)
 {
-	void *ptr = __va(memblock_alloc(sz, align));	///alloc memory from end of memory
+	void *ptr = __va(memblock_alloc(sz, align));	///TP: alloc memory from end of memory, add it to memblock.reserved
 	memset(ptr, 0, sz);
 	return ptr;
 }
 
 static void __init *early_alloc(unsigned long sz)
 {
-	return early_alloc_aligned(sz, sz);
+	return early_alloc_aligned(sz, sz);	///TP do alloc and add into memblock.reserved and zero-init allocated buffer
 }
 
 static pte_t * __init early_pte_alloc(pmd_t *pmd, unsigned long addr, unsigned long prot)
@@ -1346,7 +1346,7 @@ void __init paging_init(const struct machine_desc *mdesc)
 	top_pmd = pmd_off_k(0xffff0000);
 
 	/* allocate the zero page. */
-	zero_page = early_alloc(PAGE_SIZE);
+	zero_page = early_alloc(PAGE_SIZE);	///TP: alloc zero-init page
 
 	bootmem_init();
 

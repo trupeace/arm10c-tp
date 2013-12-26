@@ -1061,16 +1061,16 @@ static inline unsigned long early_pfn_to_nid(unsigned long pfn)
  * PA_SECTION_SHIFT		physical address to/from section number
  * PFN_SECTION_SHIFT		pfn to/from section number
  */
-#define PA_SECTION_SHIFT	(SECTION_SIZE_BITS)		//TP: 28 for 256MB
+#define PA_SECTION_SHIFT	(SECTION_SIZE_BITS)		///TP: 28 for 256MB
 #define PFN_SECTION_SHIFT	(SECTION_SIZE_BITS - PAGE_SHIFT)	///TP: 28-12
 
-#define NR_MEM_SECTIONS		(1UL << SECTIONS_SHIFT)
+#define NR_MEM_SECTIONS		(1UL << SECTIONS_SHIFT)		///TP: 16 sections
 
 #define PAGES_PER_SECTION       (1UL << PFN_SECTION_SHIFT)	///TP: 0x10000, pages in 256MB, determined by page size and root(256MB) number
 #define PAGE_SECTION_MASK	(~(PAGES_PER_SECTION-1))	///TP: 0xffff0000
 
 #define SECTION_BLOCKFLAGS_BITS \
-	((1UL << (PFN_SECTION_SHIFT - pageblock_order)) * NR_PAGEBLOCK_BITS)
+	((1UL << (PFN_SECTION_SHIFT - pageblock_order)) * NR_PAGEBLOCK_BITS)	///TP: 16-9=7, 2^7*4b = 512b
 
 #if (MAX_ORDER - 1 + PAGE_SHIFT) > SECTION_SIZE_BITS
 #error Allocator MAX_ORDER exceeds SECTION_SIZE
@@ -1097,10 +1097,10 @@ struct mem_section {
 	 * Making it a UL at least makes someone do a cast
 	 * before using it wrong.
 	 */
-	unsigned long section_mem_map;
+	unsigned long section_mem_map;	///TP: set by sparse_init_one_section()
 
 	/* See declaration of similar field in struct zone */
-	unsigned long *pageblock_flags;
+	unsigned long *pageblock_flags;	///TP: set by sparse_init_one_section(), usemap_map[section]
 #ifdef CONFIG_MEMCG
 	/*
 	 * If !SPARSEMEM, pgdat doesn't have page_cgroup pointer. We use
@@ -1128,7 +1128,7 @@ struct mem_section {
 #ifdef CONFIG_SPARSEMEM_EXTREME
 extern struct mem_section *mem_section[NR_SECTION_ROOTS];
 #else
-extern struct mem_section mem_section[NR_SECTION_ROOTS][SECTIONS_PER_ROOT];
+extern struct mem_section mem_section[NR_SECTION_ROOTS][SECTIONS_PER_ROOT];	///TP: init by arm_memory_present(), sparse_init()
 #endif
 
 static inline struct mem_section *__nr_to_section(unsigned long nr)

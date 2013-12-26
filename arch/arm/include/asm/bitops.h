@@ -200,8 +200,8 @@ extern int _find_next_bit_be(const unsigned long *p, int size, int offset);
  * These are the little endian, atomic definitions.
  */
 #define find_first_zero_bit(p,sz)	_find_first_zero_bit_le(p,sz)
-#define find_next_zero_bit(p,sz,off)	_find_next_zero_bit_le(p,sz,off)
-#define find_first_bit(p,sz)		_find_first_bit_le(p,sz)
+#define find_next_zero_bit(p,sz,off)	_find_next_zero_bit_le(p,sz,off)	///TP: start at offset bit 
+#define find_first_bit(p,sz)		_find_first_bit_le(p,sz)		///TP: find 1
 #define find_next_bit(p,sz,off)		_find_next_bit_le(p,sz,off)
 
 #else

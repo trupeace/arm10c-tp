@@ -33,7 +33,7 @@ enum pageblock_bits {
 #ifdef CONFIG_COMPACTION
 	PB_migrate_skip,/* If set the block is skipped by compaction */
 #endif /* CONFIG_COMPACTION */
-	NR_PAGEBLOCK_BITS
+	NR_PAGEBLOCK_BITS	///TP: 4
 };
 
 #ifdef CONFIG_HUGETLB_PAGE
@@ -46,7 +46,7 @@ extern int pageblock_order;
 #else /* CONFIG_HUGETLB_PAGE_SIZE_VARIABLE */
 
 /* Huge pages are a constant size */
-#define pageblock_order		HUGETLB_PAGE_ORDER
+#define pageblock_order		HUGETLB_PAGE_ORDER	///TP: 9
 
 #endif /* CONFIG_HUGETLB_PAGE_SIZE_VARIABLE */
 

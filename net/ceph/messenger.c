@@ -188,7 +188,7 @@ static void con_fault(struct ceph_connection *con);
 static char addr_str[ADDR_STR_COUNT][MAX_ADDR_STR_LEN];
 static atomic_t addr_str_seq = ATOMIC_INIT(0);
 
-static struct page *zero_page;		/* used in certain error cases */
+static struct page *zero_page;		/* used in certain error cases */	///TP: zero-initialized 4kB page
 
 const char *ceph_pr_addr(const struct sockaddr_storage *ss)
 {

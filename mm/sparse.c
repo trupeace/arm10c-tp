@@ -69,7 +69,7 @@ static struct mem_section noinline __init_refok *sparse_index_alloc(int nid)
 		else
 			section = kzalloc(array_size, GFP_KERNEL);
 	} else {
-		section = alloc_bootmem_node(NODE_DATA(nid), array_size);
+		section = alloc_bootmem_node(NODE_DATA(nid), array_size);	///TP:__alloc_bootmem_node(&contig_page_data, array_size, SMP_CACHE_BYTES(64B), BOOTMEM_LOW_LIMIT(0x5fffffff(=__pa(0xffffffff))))
 	}
 
 	return section;
@@ -236,7 +236,7 @@ static int __meminit sparse_init_one_section(struct mem_section *ms,
 
 	ms->section_mem_map &= ~SECTION_MAP_MASK;
 	ms->section_mem_map |= sparse_encode_mem_map(mem_map, pnum) |
-							SECTION_HAS_MEM_MAP;
+							SECTION_HAS_MEM_MAP;	///TP: present & mem_map alloced, 
  	ms->pageblock_flags = pageblock_bitmap;
 
 	return 1;
@@ -245,7 +245,7 @@ static int __meminit sparse_init_one_section(struct mem_section *ms,
 unsigned long usemap_size(void)
 {
 	unsigned long size_bytes;
-	size_bytes = roundup(SECTION_BLOCKFLAGS_BITS, 8) / 8;
+	size_bytes = roundup(SECTION_BLOCKFLAGS_BITS, 8) / 8;	///TP: 512b=64B
 	size_bytes = roundup(size_bytes, sizeof(unsigned long));
 	return size_bytes;
 }
@@ -347,7 +347,7 @@ static void __init sparse_early_usemaps_alloc_node(void *data,
 	void *usemap;
 	unsigned long pnum;
 	unsigned long **usemap_map = (unsigned long **)data;
-	int size = usemap_size();
+	int size = usemap_size();	///64B=0x40
 
 	usemap = sparse_early_usemaps_alloc_pgdat_section(NODE_DATA(nodeid),
 							  size * usemap_count);
@@ -371,11 +371,11 @@ struct page __init *sparse_mem_map_populate(unsigned long pnum, int nid)
 	struct page *map;
 	unsigned long size;
 
-	map = alloc_remap(nid, sizeof(struct page) * PAGES_PER_SECTION);
+	map = alloc_remap(nid, sizeof(struct page) * PAGES_PER_SECTION);	///TP: sizeof(struct page)=44B for 32b system, do nothing
 	if (map)
 		return map;
 
-	size = PAGE_ALIGN(sizeof(struct page) * PAGES_PER_SECTION);
+	size = PAGE_ALIGN(sizeof(struct page) * PAGES_PER_SECTION);	///TP: 0x2c0000: 64k * 44B
 	map = __alloc_bootmem_node_high(NODE_DATA(nid), size,
 					 PAGE_SIZE, __pa(MAX_DMA_ADDRESS));
 	return map;
@@ -447,7 +447,7 @@ static struct page __init *sparse_early_mem_map_alloc(unsigned long pnum)
 	struct mem_section *ms = __nr_to_section(pnum);
 	int nid = sparse_early_nid(ms);
 
-	map = sparse_mem_map_populate(pnum, nid);
+	map = sparse_mem_map_populate(pnum, nid);	///TP: alloc struct(page) * 0x10000
 	if (map)
 		return map;
 
@@ -545,11 +545,11 @@ void __init sparse_init(void)
 	 * sparse_early_mem_map_alloc, so allocate usemap_map at first.
 	 */
 	size = sizeof(unsigned long *) * NR_MEM_SECTIONS;
-	usemap_map = alloc_bootmem(size);
+	usemap_map = alloc_bootmem(size);	///TP: unsigned long *usemap_map[NR_MEM_SECTIONS];
 	if (!usemap_map)
 		panic("can not allocate usemap_map\n");
 	alloc_usemap_and_memmap(sparse_early_usemaps_alloc_node,
-							(void *)usemap_map);
+							(void *)usemap_map);	///alloc 64B usemap for each section
 
 #ifdef CONFIG_SPARSEMEM_ALLOC_MEM_MAP_TOGETHER
 	size2 = sizeof(struct page *) * NR_MEM_SECTIONS;
@@ -576,16 +576,16 @@ void __init sparse_init(void)
 		if (!map)
 			continue;
 
-		sparse_init_one_section(__nr_to_section(pnum), pnum, map,
-								usemap);
+		sparse_init_one_section(__nr_to_section(pnum), pnum, map,	///TP: __nr_to_section(pnum): &mem_section[0][section]
+								usemap);	///TP: usemap: 64B=128*4b for each section, usemap_map[section]
 	}
 
-	vmemmap_populate_print_last();
+	vmemmap_populate_print_last();	///TP: do nothing
 
 #ifdef CONFIG_SPARSEMEM_ALLOC_MEM_MAP_TOGETHER
 	free_bootmem(__pa(map_map), size2);
 #endif
-	free_bootmem(__pa(usemap_map), size);
+	free_bootmem(__pa(usemap_map), size);	///TP: usemap_map used for pointer for each section, not used anymore
 }
 
 #ifdef CONFIG_MEMORY_HOTPLUG

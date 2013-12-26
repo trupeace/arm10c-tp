@@ -45,7 +45,7 @@ ENDPROC(_find_first_zero_bit_le)
 ENTRY(_find_next_zero_bit_le)
 		teq	r1, #0
 		beq	3b
-		ands	ip, r2, #7		///bit offset in byte
+		ands	ip, r2, #7		///TP: bit offset in byte
 		beq	1b			@ If new byte, goto old routine
  ARM(		ldrb	r3, [r0, r2, lsr #3]	)
  THUMB(		lsr	r3, r2, #3		)
