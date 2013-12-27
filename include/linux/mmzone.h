@@ -1097,7 +1097,7 @@ struct mem_section {
 	 * Making it a UL at least makes someone do a cast
 	 * before using it wrong.
 	 */
-	unsigned long section_mem_map;	///TP: set by sparse_init_one_section()
+	unsigned long section_mem_map;	///TP: node id[n:2], has_memmap[1], present[0], set by memory_present() & sparse_init_one_section()
 
 	/* See declaration of similar field in struct zone */
 	unsigned long *pageblock_flags;	///TP: set by sparse_init_one_section(), usemap_map[section]

@@ -22,14 +22,14 @@
  * covers a range of 512GB, each entry representing 1GB. The user and kernel
  * address spaces are limited to 512GB each.
  */
-#define PTRS_PER_PTE		512
-#define PTRS_PER_PMD		512
-#define PTRS_PER_PGD		512
+#define PTRS_PER_PTE		512	///TP: 2MB=512*4kB
+#define PTRS_PER_PMD		512	///TP: 1GB
+#define PTRS_PER_PGD		512	///TP: 512GB
 
 /*
  * PGDIR_SHIFT determines the size a top-level page table entry can map.
  */
-#define PGDIR_SHIFT		30
+#define PGDIR_SHIFT		30	///TP: 0x40000000=1GB
 #define PGDIR_SIZE		(_AC(1, UL) << PGDIR_SHIFT)
 #define PGDIR_MASK		(~(PGDIR_SIZE-1))
 

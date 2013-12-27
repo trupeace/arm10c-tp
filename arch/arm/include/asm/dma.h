@@ -10,7 +10,7 @@
 #define MAX_DMA_ADDRESS	({ \
 	extern unsigned long arm_dma_zone_size; \
 	arm_dma_zone_size ? \
-		(PAGE_OFFSET + arm_dma_zone_size) : 0xffffffffUL; })
+		(PAGE_OFFSET + arm_dma_zone_size) : 0xffffffffUL; })	///TP: 0xffffffffUL
 #endif
 
 #ifdef CONFIG_ISA_DMA_API

@@ -21,10 +21,10 @@
  */
 #ifdef CONFIG_SPARSEMEM_EXTREME
 struct mem_section *mem_section[NR_SECTION_ROOTS]
-	____cacheline_internodealigned_in_smp;
+	____cacheline_internodealigned_in_smp;	///TP: set by set by bootmem_init().arm_bootmem_free().memory_present().sparse_index_init()
 #else
 struct mem_section mem_section[NR_SECTION_ROOTS][SECTIONS_PER_ROOT]
-	____cacheline_internodealigned_in_smp;	///TP: [1][2^9]
+	____cacheline_internodealigned_in_smp;
 #endif
 EXPORT_SYMBOL(mem_section);
 
@@ -37,7 +37,7 @@ EXPORT_SYMBOL(mem_section);
 #if MAX_NUMNODES <= 256
 static u8 section_to_node_table[NR_MEM_SECTIONS] __cacheline_aligned;
 #else
-static u16 section_to_node_table[NR_MEM_SECTIONS] __cacheline_aligned;
+static u16 section_to_node_table[NR_MEM_SECTIONS] __cacheline_aligned;	///TP: set by bootmem_init().arm_bootmem_free().memory_present().set_section_nid()
 #endif
 
 int page_to_nid(const struct page *page)
@@ -175,13 +175,13 @@ void __init memory_present(int nid, unsigned long start, unsigned long end)
 		unsigned long section = pfn_to_section_nr(pfn);		///TP: pfn>>16(28b=256MB)
 		struct mem_section *ms;
 
-		sparse_index_init(section, nid);
+		sparse_index_init(section, nid);	///TP: alloc mem_section for the root
 		set_section_nid(section, nid);
 
 		ms = __nr_to_section(section);
 		if (!ms->section_mem_map)
 			ms->section_mem_map = sparse_encode_early_nid(nid) |
-							SECTION_MARKED_PRESENT;
+							SECTION_MARKED_PRESENT;	///TP: mark mem_section as present and node id
 	}
 }
 
@@ -531,7 +531,7 @@ void __init sparse_init(void)
 	BUILD_BUG_ON(!is_power_of_2(sizeof(struct mem_section)));
 
 	/* Setup pageblock_order for HUGETLB_PAGE_SIZE_VARIABLE */
-	set_pageblock_order();
+	set_pageblock_order();		///TP: do nothing, parameter is compile-time determined
 
 	/*
 	 * map is using big page (aka 2M in x86 64 bit)
@@ -544,8 +544,8 @@ void __init sparse_init(void)
 	 * powerpc need to call sparse_init_one_section right after each
 	 * sparse_early_mem_map_alloc, so allocate usemap_map at first.
 	 */
-	size = sizeof(unsigned long *) * NR_MEM_SECTIONS;
-	usemap_map = alloc_bootmem(size);	///TP: unsigned long *usemap_map[NR_MEM_SECTIONS];
+	size = sizeof(unsigned long *) * NR_MEM_SECTIONS;	///TP: 64B=4*16, temporarily used ptr =unsigned long *usemap_map[NR_MEM_SECTIONS];
+	usemap_map = alloc_bootmem(size);
 	if (!usemap_map)
 		panic("can not allocate usemap_map\n");
 	alloc_usemap_and_memmap(sparse_early_usemaps_alloc_node,

@@ -35,15 +35,15 @@
  */
 #define PMD_TYPE_MASK		(_AT(pmdval_t, 3) << 0)
 #define PMD_TYPE_FAULT		(_AT(pmdval_t, 0) << 0)
-#define PMD_TYPE_TABLE		(_AT(pmdval_t, 3) << 0)
-#define PMD_TYPE_SECT		(_AT(pmdval_t, 1) << 0)
+#define PMD_TYPE_TABLE		(_AT(pmdval_t, 3) << 0)		///TP: next lvl table
+#define PMD_TYPE_SECT		(_AT(pmdval_t, 1) << 0)		///TP: block
 #define PMD_TABLE_BIT		(_AT(pmdval_t, 1) << 1)
 
 /*
  * Section
  */
 #define PMD_SECT_VALID		(_AT(pmdval_t, 1) << 0)
-#define PMD_SECT_PROT_NONE	(_AT(pmdval_t, 1) << 2)
+#define PMD_SECT_PROT_NONE	(_AT(pmdval_t, 1) << 58)
 #define PMD_SECT_USER		(_AT(pmdval_t, 1) << 6)		/* AP[1] */
 #define PMD_SECT_RDONLY		(_AT(pmdval_t, 1) << 7)		/* AP[2] */
 #define PMD_SECT_S		(_AT(pmdval_t, 3) << 8)
@@ -84,6 +84,8 @@
  */
 #define PTE_S2_RDONLY		(_AT(pteval_t, 1) << 6)   /* HAP[2:1] */
 #define PTE_S2_RDWR		(_AT(pteval_t, 3) << 6)   /* HAP[2:1] */
+
+#define PMD_S2_RDWR		(_AT(pmdval_t, 3) << 6)   /* HAP[2:1] */
 
 /*
  * Memory Attribute override for Stage-2 (MemAttr[3:0])

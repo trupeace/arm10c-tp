@@ -123,15 +123,16 @@
 
 ENTRY(stext)
 	mov	x21, x0				// x21=FDT
+	bl	el2_setup			// Drop to EL1, w20=cpu_boot_mode
 	bl	__calc_phys_offset		// x24=PHYS_OFFSET, x28=PHYS_OFFSET-PAGE_OFFSET
-	bl	el2_setup			// Drop to EL1
+	bl	set_cpu_boot_mode_flag
 	mrs	x22, midr_el1			// x22=cpuid
 	mov	x0, x22
-	bl	lookup_processor_type
-	mov	x23, x0				// x23=current cpu_table
-	cbz	x23, __error_p			// invalid processor (x23=0)?
-	bl	__vet_fdt
-	bl	__create_page_tables		// x25=TTBR0, x26=TTBR1
+	bl	lookup_processor_type		///TP: return x0 with 
+	mov	x23, x0				// x23=current cpu_table struct cpu_info cpu_table[];
+	cbz	x23, __error_p			// invalid processor (x23=0)?	///TP: compare and branch if zero
+	bl	__vet_fdt			///TP; x21=vetted FDT
+	bl	__create_page_tables		// x25=TTBR0, x26=TTBR1, create idmap,kernel table 
 	/*
 	 * The following calls CPU specific code in a position independent
 	 * manner. See arch/arm64/mm/proc.S for details. x23 = base of
@@ -139,39 +140,48 @@ ENTRY(stext)
 	 * On return, the CPU will be ready for the MMU to be turned on and
 	 * the TCR will have been set.
 	 */
-	ldr	x27, __switch_data		// address to jump to after
+	ldr	x27, __switch_data		// address to jump to after	///TP: Q: __switch_data seems to be fixed to __mmap_switched, A: be careful!!! not =__switch_data, just __switch_data, this is PC relative load using literal
 						// MMU has been enabled
 	adr	lr, __enable_mmu		// return (PIC) address
-	ldr	x12, [x23, #CPU_INFO_SETUP]
-	add	x12, x12, x28			// __virt_to_phys
+	ldr	x12, [x23, #CPU_INFO_SETUP]	///TP: __cpu_setup(), arch/arm64/mm/proc.S
+	add	x12, x12, x28			// __virt_to_phys	///TP: x28=delta(PHYS_OFFSET-PAGE_OFFSET)
 	br	x12				// initialise processor
 ENDPROC(stext)
 
 /*
  * If we're fortunate enough to boot at EL2, ensure that the world is
  * sane before dropping to EL1.
+ *
+ * Returns either BOOT_CPU_MODE_EL1 or BOOT_CPU_MODE_EL2 in x20 if
+ * booted in EL1 or EL2 respectively.
  */
 ENTRY(el2_setup)
 	mrs	x0, CurrentEL
 	cmp	x0, #PSR_MODE_EL2t
-	ccmp	x0, #PSR_MODE_EL2h, #0x4, ne
-	ldr	x0, =__boot_cpu_mode		// Compute __boot_cpu_mode
-	add	x0, x0, x28
-	b.eq	1f
-	str	wzr, [x0]			// Remember we don't have EL2...
+	ccmp	x0, #PSR_MODE_EL2h, #0x4, ne	///TP: conditional compare, nzcv = (ne)?cmp(x0-#PSR_MODE_EL2h):#0x4
+	b.ne	1f
+	mrs	x0, sctlr_el2
+CPU_BE(	orr	x0, x0, #(1 << 25)	)	// Set the EE bit for EL2
+CPU_LE(	bic	x0, x0, #(1 << 25)	)	// Clear the EE bit for EL2
+	msr	sctlr_el2, x0
+	b	2f
+1:	mrs	x0, sctlr_el1
+CPU_BE(	orr	x0, x0, #(3 << 24)	)	// Set the EE and E0E bits for EL1
+CPU_LE(	bic	x0, x0, #(3 << 24)	)	// Clear the EE and E0E bits for EL1
+	msr	sctlr_el1, x0
+	mov	w20, #BOOT_CPU_MODE_EL1		// This cpu booted in EL1
+	isb
 	ret
 
 	/* Hyp configuration. */
-1:	ldr	w1, =BOOT_CPU_MODE_EL2
-	str	w1, [x0, #4]			// This CPU has EL2
-	mov	x0, #(1 << 31)			// 64-bit EL1
+2:	mov	x0, #(1 << 31)			// 64-bit EL1
 	msr	hcr_el2, x0
 
 	/* Generic timers. */
 	mrs	x0, cnthctl_el2
 	orr	x0, x0, #3			// Enable EL1 physical timers
 	msr	cnthctl_el2, x0
-	msr	cntvoff_el2, xzr		// Clear virtual offset
+	msr	cntvoff_el2, xzr		// Clear virtual offset		///TP: xzr=x31=64b zero reg, w for 32b
 
 	/* Populate ID registers. */
 	mrs	x0, midr_el1
@@ -181,7 +191,8 @@ ENTRY(el2_setup)
 
 	/* sctlr_el1 */
 	mov	x0, #0x0800			// Set/clear RES{1,0} bits
-	movk	x0, #0x30d0, lsl #16
+CPU_BE(	movk	x0, #0x33d0, lsl #16	)	// Set EE and E0E on BE systems
+CPU_LE(	movk	x0, #0x30d0, lsl #16	)	// Clear EE and E0E on LE systems
 	msr	sctlr_el1, x0
 
 	/* Coprocessor traps. */
@@ -204,8 +215,23 @@ ENTRY(el2_setup)
 		      PSR_MODE_EL1h)
 	msr	spsr_el2, x0
 	msr	elr_el2, lr
+	mov	w20, #BOOT_CPU_MODE_EL2		// This CPU booted in EL2
 	eret
 ENDPROC(el2_setup)
+
+/*
+ * Sets the __boot_cpu_mode flag depending on the CPU boot mode passed
+ * in x20. See arch/arm64/include/asm/virt.h for more info.
+ */
+ENTRY(set_cpu_boot_mode_flag)
+	ldr	x1, =__boot_cpu_mode		// Compute __boot_cpu_mode
+	add	x1, x1, x28
+	cmp	w20, #BOOT_CPU_MODE_EL2
+	b.ne	1f
+	add	x1, x1, #4
+1:	str	w20, [x1]			// This CPU has booted in EL1
+	ret
+ENDPROC(set_cpu_boot_mode_flag)
 
 /*
  * We need to find out the CPU boot mode long after boot, so we need to
@@ -216,7 +242,7 @@ ENDPROC(el2_setup)
  */
 	.pushsection	.data
 ENTRY(__boot_cpu_mode)
-	.long	BOOT_CPU_MODE_EL2
+	.long	BOOT_CPU_MODE_EL2	///TP: must be same [0] [1]. discrepancy means not initialized correctly
 	.long	0
 	.popsection
 
@@ -225,7 +251,6 @@ ENTRY(__boot_cpu_mode)
 	.quad	PAGE_OFFSET
 
 #ifdef CONFIG_SMP
-	.pushsection    .smp.pen.text, "ax"
 	.align	3
 1:	.quad	.
 	.quad	secondary_holding_pen_release
@@ -235,8 +260,9 @@ ENTRY(__boot_cpu_mode)
 	 * cores are held until we're ready for them to initialise.
 	 */
 ENTRY(secondary_holding_pen)
-	bl	__calc_phys_offset		// x24=phys offset
-	bl	el2_setup			// Drop to EL1
+	bl	el2_setup			// Drop to EL1, w20=cpu_boot_mode
+	bl	__calc_phys_offset		// x24=PHYS_OFFSET, x28=PHYS_OFFSET-PAGE_OFFSET
+	bl	set_cpu_boot_mode_flag
 	mrs	x0, mpidr_el1
 	ldr     x1, =MPIDR_HWID_BITMASK
 	and	x0, x0, x1
@@ -250,7 +276,17 @@ pen:	ldr	x4, [x3]
 	wfe
 	b	pen
 ENDPROC(secondary_holding_pen)
-	.popsection
+
+	/*
+	 * Secondary entry point that jumps straight into the kernel. Only to
+	 * be used where CPUs are brought online dynamically by the kernel.
+	 */
+ENTRY(secondary_entry)
+	bl	el2_setup			// Drop to EL1
+	bl	__calc_phys_offset		// x24=PHYS_OFFSET, x28=PHYS_OFFSET-PAGE_OFFSET
+	bl	set_cpu_boot_mode_flag
+	b	secondary_startup
+ENDPROC(secondary_entry)
 
 ENTRY(secondary_startup)
 	/*
@@ -288,10 +324,10 @@ ENDPROC(__secondary_switched)
  * the MMU.
  */
 __enable_mmu:
-	ldr	x5, =vectors
+	ldr	x5, =vectors		///TP: arch/arm64/kernel/entry.S
 	msr	vbar_el1, x5
-	msr	ttbr0_el1, x25			// load TTBR0
-	msr	ttbr1_el1, x26			// load TTBR1
+	msr	ttbr0_el1, x25			// load TTBR0	///TP: idmap tbl
+	msr	ttbr1_el1, x26			// load TTBR1	///TP: kernel tbl
 	isb
 	b	__turn_mmu_on
 ENDPROC(__enable_mmu)
@@ -317,7 +353,7 @@ ENDPROC(__turn_mmu_on)
  */
 __calc_phys_offset:
 	adr	x0, 1f
-	ldp	x1, x2, [x0]
+	ldp	x1, x2, [x0]		///TP: load pair
 	sub	x28, x0, x1			// x28 = PHYS_OFFSET - PAGE_OFFSET
 	add	x24, x2, x28			// x24 = PHYS_OFFSET
 	ret
@@ -325,7 +361,7 @@ ENDPROC(__calc_phys_offset)
 
 	.align 3
 1:	.quad	.
-	.quad	PAGE_OFFSET
+	.quad	PAGE_OFFSET		///TP: changed to PHYS_OFFSET by __calc_phys_offset()
 
 /*
  * Macro to populate the PGD for the corresponding block entry in the next
@@ -335,8 +371,8 @@ ENDPROC(__calc_phys_offset)
  * Corrupts:	tmp1, tmp2
  */
 	.macro	create_pgd_entry, pgd, tbl, virt, tmp1, tmp2
-	lsr	\tmp1, \virt, #PGDIR_SHIFT
-	and	\tmp1, \tmp1, #PTRS_PER_PGD - 1	// PGD index
+	lsr	\tmp1, \virt, #PGDIR_SHIFT	///TP: 30(1GB), 3lvl 4kB paging
+	and	\tmp1, \tmp1, #PTRS_PER_PGD - 1	// PGD index	///TP: 0x1ff
 	orr	\tmp2, \tbl, #3			// PGD entry table type
 	str	\tmp2, [\pgd, \tmp1, lsl #3]
 	.endm
@@ -349,7 +385,7 @@ ENDPROC(__calc_phys_offset)
  * Corrupts:	phys, start, end, pstate
  */
 	.macro	create_block_map, tbl, flags, phys, start, end, idmap=0
-	lsr	\phys, \phys, #BLOCK_SHIFT
+	lsr	\phys, \phys, #BLOCK_SHIFT		///TP: #BLOCK_SHIFT=21(2MB)
 	.if	\idmap
 	and	\start, \phys, #PTRS_PER_PTE - 1	// table index
 	.else
@@ -379,7 +415,7 @@ ENDPROC(__calc_phys_offset)
  *   - UART mapping if CONFIG_EARLY_PRINTK is enabled (TTBR1)
  */
 __create_page_tables:
-	pgtbl	x25, x26, x24			// idmap_pg_dir and swapper_pg_dir addresses
+	pgtbl	x25, x26, x24			// idmap_pg_dir(x25,ttbr0) and swapper_pg_dir(x26,ttbr1) addresses
 
 	/*
 	 * Clear the idmap and swapper page tables.
@@ -400,18 +436,18 @@ __create_page_tables:
 	 */
 	add	x0, x25, #PAGE_SIZE		// section table address
 	adr	x3, __turn_mmu_on		// virtual/physical address
-	create_pgd_entry x25, x0, x3, x5, x6
-	create_block_map x0, x7, x3, x5, x5, idmap=1
+	create_pgd_entry x25, x0, x3, x5, x6	///TP: fill a entry in 1st idmap tbl, create_pgd_entry, pgd_ptr, tbl_val, VA, tmp1, tmp2
+	create_block_map x0, x7, x3, x5, x5, idmap=1	///TP: fill entries in 2nd idmap tbl, create_block_map, tbl, flags, phys, start, end, idmap=0
 
 	/*
 	 * Map the kernel image (starting with PHYS_OFFSET).
 	 */
 	add	x0, x26, #PAGE_SIZE		// section table address
 	mov	x5, #PAGE_OFFSET
-	create_pgd_entry x26, x0, x5, x3, x6
+	create_pgd_entry x26, x0, x5, x3, x6	///TP: fill entries in 1nd kernel tbl
 	ldr	x6, =KERNEL_END - 1
 	mov	x3, x24				// phys offset
-	create_block_map x0, x7, x3, x5, x6
+	create_block_map x0, x7, x3, x5, x6	///TP: fill entries in 2nd kernel tbl
 
 	/*
 	 * Map the FDT blob (maximum 2MB; must be within 512MB of
@@ -427,7 +463,7 @@ __create_page_tables:
 	add	x5, x5, x6			// __va(FDT blob)
 	add	x6, x5, #1 << 21		// 2MB for the FDT blob
 	sub	x6, x6, #1			// inclusive range
-	create_block_map x0, x7, x3, x5, x6
+	create_block_map x0, x7, x3, x5, x6	///TP: fill enries in 2nd kernel tbl
 1:
 #ifdef CONFIG_EARLY_PRINTK
 	/*
@@ -515,7 +551,7 @@ ENTRY(lookup_processor_type)
 	add	x3, x3, x1			// convert VA to PA
 1:
 	ldp	w5, w6, [x3]			// load cpu_id_val and cpu_id_mask
-	cbz	w5, 2f				// end of list?
+	cbz	w5, 2f				// end of list?		///TP: compare and branch if zero
 	and	w6, w6, w0
 	cmp	w5, w6
 	b.eq	3f
@@ -539,15 +575,16 @@ __lookup_processor_type_data:
  * Determine validity of the x21 FDT pointer.
  * The dtb must be 8-byte aligned and live in the first 512M of memory.
  */
+///TP: __vet_fdt is changed not to checkt whether it is dtb, or includs ATAG_CORE entry.
 __vet_fdt:
-	tst	x21, #0x7
+	tst	x21, #0x7	///TP: address is 8B aligned?
 	b.ne	1f
-	cmp	x21, x24
+	cmp	x21, x24	///TP: must have FDT ptr >= PHYS_OFFSET
 	b.lt	1f
-	mov	x0, #(1 << 29)
+	mov	x0, #(1 << 29)	///TP: 0x20000000=512MB
 	add	x0, x0, x24
 	cmp	x21, x0
-	b.ge	1f
+	b.ge	1f		///TP: must have FDT ptr < PHYS_OFFSET+512MB
 	ret
 1:
 	mov	x21, #0
