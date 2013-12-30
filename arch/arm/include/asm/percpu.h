@@ -33,9 +33,9 @@ static inline unsigned long __my_cpu_offset(void)
 	register unsigned long *sp asm ("sp");
 
 	/*
-	 * Read TPIDRPRW.
+	 * Read TPIDRPRW.	///TP: pl1 only thread id
 	 * We want to allow caching the value, so avoid using volatile and
-	 * instead use a fake stack read to hazard against barrier().
+	 * instead use a fake stack read to hazard against barrier().	///TP: Q: meaning?
 	 */
 	asm("mrc p15, 0, %0, c13, c0, 4" : "=r" (off) : "Q" (*sp));
 

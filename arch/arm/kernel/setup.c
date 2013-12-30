@@ -99,7 +99,7 @@ unsigned int elf_hwcap __read_mostly;	///TP: HWCAP_SWP | HWCAP_HALF | HWCAP_THUM
 EXPORT_SYMBOL(elf_hwcap);
 
 
-#ifdef MULTI_CPU
+#ifdef MULTI_CPU	///TP: Q: not defined
 struct processor processor __read_mostly;	///TP: v7_processor_functions, set by setup_processor(), functions defined by macro define_processor_functions in arch/arm/mm/proc-v7.S
 #endif
 #ifdef MULTI_TLB
@@ -122,7 +122,7 @@ EXPORT_SYMBOL(outer_cache);
  * variable directly.
  */
 /// __read_mostly: seperate section which is assumed to be used frequently, for cache hit rate
-int __cpu_architecture __read_mostly = CPU_ARCH_UNKNOWN;	///TP: CPU_ARCH_ARMv7
+int __cpu_architecture __read_mostly = CPU_ARCH_UNKNOWN;	///TP: CPU_ARCH_ARMv7, set by setup_processor()
 
 struct stack {
 	u32 irq[3];
@@ -137,7 +137,7 @@ static struct stack stacks[NR_CPUS];
 char elf_platform[ELF_PLATFORM_SIZE];
 EXPORT_SYMBOL(elf_platform);
 
-static const char *cpu_name;	///TP: pointer of "ARMv7 Processor" in proc-v7.S
+static const char *cpu_name;	///TP: pointer of "ARMv7 Processor"=list->cpu_name set by setup_processor(), defined in proc-v7.S
 static const char *machine_name;
 static char __initdata cmd_line[COMMAND_LINE_SIZE];
 const struct machine_desc *machine_desc __initdata;	///TP: "SAMSUNG EXYNOS5 (Flattened Device Tree)" set by setup_arch()
@@ -483,7 +483,7 @@ void __init smp_setup_processor_id(void)
 	 * using percpu variable early, for example, lockdep will
 	 * access percpu variable inside lock_release
 	 */
-	set_my_cpu_offset(0);
+	set_my_cpu_offset(0);	///TP: store cpu offset 0 to TPIDRPRW
 
 	printk(KERN_INFO "Booting Linux on physical CPU 0x%x\n", mpidr);
 }
@@ -563,7 +563,7 @@ static void __init setup_processor(void)
 	 * types.  The linker builds this table for us from the
 	 * entries in arch/arm/mm/proc-*.S
 	 */
-	list = lookup_processor_type(read_cpuid_id());
+	list = lookup_processor_type(read_cpuid_id());	///TP: read_cpuid_id(): read from cp15, lookup_processor_type(): find proper structure in proc_info_list array
 	if (!list) {
 		printk("CPU configuration botched (ID %08x), unable "
 		       "to continue.\n", read_cpuid_id());
@@ -605,8 +605,8 @@ static void __init setup_processor(void)
 
 	feat_v6_fixup();	///TP: Main ID 0x410fc0f0
 
-	cacheid_init();	///TP: set cacheid 
-	cpu_init();	///TP; setup stack for each cpu
+	cacheid_init();	///TP: set cacheid, cacheid=CACHEID_VIPT_NONALIASING | CACHEID_PIPT
+	cpu_init();	///TP; setup stack(svc,irq,fiq,...) for each cpu, and percpu offset(TPIDRPRW)
 }
 
 void __init dump_machine_table(void)
@@ -859,14 +859,14 @@ void __init setup_arch(char **cmdline_p)
 	const struct machine_desc *mdesc;
 
 	setup_processor();	///TP: get cpuinfo using lookup_processor_type() and set processor, cpu_tlb, cpu_user, cpu_cache, elf_hwcap, cacheid, stack...
-	mdesc = setup_machine_fdt(__atags_pointer);	///TP: setup model, boot_command_line(bootargs in dtb), memory
+	mdesc = setup_machine_fdt(__atags_pointer);	///TP: setup model, boot_command_line(bootargs in dtb), memory(meminfo)
 	///TP: now mdesc = best matched machine_desc * in .arch.info.init section, refer to DT_MACHINE_START() arch/arm/mach-exynos/mach-exynos5-dt.c
 	if (!mdesc)
-		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);	//if no dtb, use atags
+		mdesc = setup_machine_tags(__atags_pointer, __machine_arch_type);	///TP: if no dtb, use atags
 	machine_desc = mdesc;
 	machine_name = mdesc->name;
 
-	setup_dma_zone(mdesc);
+	setup_dma_zone(mdesc);	///TP: ifdef CONFIG_ZONE_DMA, setup dma zone limit, size
 
 	if (mdesc->reboot_mode != REBOOT_HARD)
 		reboot_mode = mdesc->reboot_mode;

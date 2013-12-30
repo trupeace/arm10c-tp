@@ -332,7 +332,7 @@ static struct page_address_map page_address_maps[LAST_PKMAP];
 static struct page_address_slot {
 	struct list_head lh;			/* List of page_address_maps */
 	spinlock_t lock;			/* Protect this bucket's list */
-} ____cacheline_aligned_in_smp page_address_htable[1<<PA_HASH_ORDER];   ///TP: 128 htable
+} ____cacheline_aligned_in_smp page_address_htable[1<<PA_HASH_ORDER];   ///TP: 128 htable. Q: hash function output domain size is 128?
 
 static struct page_address_slot *page_slot(const struct page *page)
 {

@@ -397,13 +397,20 @@ static int __init do_early_param(char *param, char *val, const char *unused)
 {	///TP: param("console"), val("ttySAC2,115200"), "early options"
 	const struct obs_kernel_param *p;
 
-	///early_param("earlycon", setup_early_serial8250_console); => __setup_param(str, fn, fn, 1)
+	///TP: comment.
+	/*
+	  1. early=1 && bootargs.param == str in macro               => early_param("console"... or early_param("init"...) not found
+	  2. bootargs.param == "console" && earlycon == str in macro => __setup("ealrycon"...) found => ./drivers/tty/serial/8250/8250_early.c is not exyno's object
+		furthermore, setup_early_serial8250_console() do nothing when val != uart or uart8250
+	  in conclusion, for exynos, do nothing.
+	 */
+	///TP: early_param("earlycon", setup_early_serial8250_console); => __setup_param(str, fn, fn, 1)
 	for (p = __setup_start; p < __setup_end; p++) {
 		if ((p->early && parameq(param, p->str)) ||     ///TP: no ealry for param "init" => bypass init
 		    (strcmp(param, "console") == 0 &&
 		     strcmp(p->str, "earlycon") == 0)
 		) {
-			if (p->setup_func(val) != 0)    ///TP:setup_early_serial8250_console(val)
+			if (p->setup_func(val) != 0)    ///TP: setup_early_serial8250_console(val)
 				pr_warn("Malformed early option '%s'\n", param);
 		}
 	}
@@ -481,26 +488,26 @@ asmlinkage void __init start_kernel(void)
 	 * Need to run as early as possible, to initialize the
 	 * lockdep hash:
 	 */
-	lockdep_init();			///TP: init hash related lists such as classhash_table, chainhash_table  
+	lockdep_init();			///TP: ifdef CONFIG_LOCKDEP, init hash related lists such as classhash_table, chainhash_table  
 	smp_setup_processor_id();	///TP: fill cpu_logical_map[], 
-	debug_objects_early_init();	///TP: init hash buckets and static object pool list; spinlock structure & obj_pool list, object tracker is operational
+	debug_objects_early_init();	///TP: ifdef CONFIG_DEBUG_OBJECTS, init hash buckets and static object pool list; spinlock structure & obj_pool list, object tracker is operational
 
 	/*
 	 * Set up the the initial canary ASAP:
 	 */
-	boot_init_stack_canary();	///TP: set canary value for stack protection, only when CONFIG_CC_STACKPROTECTOR
+	boot_init_stack_canary();	///TP: ifdef CONFIG_CC_STACKPROTECTOR, set canary value for stack protection
 
-	cgroup_init_early();	///TP: init cgroups; init lists in init_css_set when CONFIG_CGROUPS 
+	cgroup_init_early();		///TP: ifdef CONFIG_CGROUPS, init cgroups; init lists in init_css_set
 
-	local_irq_disable();	///TP: may use "cpsid i" or mrs/msr
+	local_irq_disable();		///TP: may use "cpsid i" or mrs/msr
 	early_boot_irqs_disabled = true;
 
 /*
  * Interrupts are still disabled. Do necessary setups, then
  * enable them
  */
-	boot_cpu_init();	///TP: set bit current_thread_info()->cpu in possible, present, active, onine cpu bitmap
-	page_address_init();	///TP: init list head of page_address_htable[].lh list, init spin lock of page_address_htable[].lock
+	boot_cpu_init();		///TP: set bit current_thread_info()->cpu in possible, present, active, onine cpu bitmap
+	page_address_init();		///TP: init list head of page_address_htable[].lh list, init spin lock of page_address_htable[].lock
 	pr_notice("%s", linux_banner);	///TP: print linux banner "Linux version 3.12.0-00012-g4abc29e-dirty"...
 	setup_arch(&command_line);	///TP: command_line=cmd_line
 	mm_init_owner(&init_mm, &init_task);

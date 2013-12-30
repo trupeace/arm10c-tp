@@ -26,7 +26,7 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 
-void __init early_init_dt_add_memory_arch(u64 base, u64 size)
+void __init early_init_dt_add_memory_arch(u64 base, u64 size)	///TP: add meminfo
 {
 	arm_add_memory(base, size);
 }
@@ -253,7 +253,7 @@ const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)	///TP
 	of_scan_flat_dt(early_init_dt_scan_memory, NULL);	///TP: config meminfo structure
 
 	/* Change machine number to match the mdesc we're using */
-	__machine_arch_type = mdesc_best->nr;   ///for DT case, 0xffffffff, otherwise, MACH_TYPE_type, nr=architecture number
+	__machine_arch_type = mdesc_best->nr;			///TP: for DT case, 0xffffffff, otherwise, MACH_TYPE_type, nr=architecture number
 
 	return mdesc_best;      ///TP:machine_desc * in .arch.info.init
 }

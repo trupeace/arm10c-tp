@@ -632,9 +632,9 @@ void __init early_init_dt_check_for_initrd(unsigned long node)
 
 	pr_debug("Looking for initrd properties... ");
 
-  ///TP: initrd can be attached by atags_to_fdt, this is optional
-  //    refer to arch/arm/boot/compressed/atags_to_fdt.c
-  //    what is in initrd?
+	///TP: initrd can be attached by atags_to_fdt, this is optional
+	//    refer to arch/arm/boot/compressed/atags_to_fdt.c
+	//    what is in initrd?
 	prop = of_get_flat_dt_prop(node, "linux,initrd-start", &len);   ///TP: this is not in exynos dtb, atags_to_fdt modify dtb to have initrd
 	if (!prop)
 		return;

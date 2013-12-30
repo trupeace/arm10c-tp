@@ -92,7 +92,7 @@ static int parse_one(char *param,
 		     s16 max_level,
 		     int (*handle_unknown)(char *param, char *val,
 				     const char *doing))
-{ ///TP: parse_one(param("console"), val("ttySAC2,115200"), "early options", NULL, 0, 0, 0, do_early_param);
+{	///TP: parse_one(param("console"), val("ttySAC2,115200"), "early options", NULL, 0, 0, 0, do_early_param);
 	unsigned int i;
 	int err;
 

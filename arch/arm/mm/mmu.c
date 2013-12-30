@@ -1002,9 +1002,9 @@ void __init sanity_check_meminfo(void)
 {
 	phys_addr_t memblock_limit = 0;
 	int i, j, highmem = 0;
-	phys_addr_t vmalloc_limit = __pa(vmalloc_min - 1) + 1;  ///TP: vmalloc_min:0xef80_0000 -> 0x6f80_0000, 0x4f800000
+	phys_addr_t vmalloc_limit = __pa(vmalloc_min - 1) + 1;	///TP: vmalloc_min:0xef80_0000 -> 0x4f80_0000
 
-	for (i = 0, j = 0; i < meminfo.nr_banks; i++) {   ///TP: j is number of bank for splitted memory
+	for (i = 0, j = 0; i < meminfo.nr_banks; i++) {		///TP: j is number of bank for splitted memory
 		struct membank *bank = &meminfo.bank[j];
 		phys_addr_t size_limit;
 
@@ -1065,7 +1065,7 @@ void __init sanity_check_meminfo(void)
 		}
 #endif
 		if (!bank->highmem) {
-			phys_addr_t bank_end = bank->start + bank->size; ///TP: 0x6f800000 = 0x40000000 + 0x2f800000
+			phys_addr_t bank_end = bank->start + bank->size; ///TP: 0x4f800000 = 0x20000000 + 0x2f800000
 
 			if (bank_end > arm_lowmem_limit)    ///TP:initially arm_lowmem_limit=0
 				arm_lowmem_limit = bank_end;
@@ -1113,7 +1113,7 @@ void __init sanity_check_meminfo(void)
 	}
 #endif
 	meminfo.nr_banks = j;
-	high_memory = __va(arm_lowmem_limit - 1) + 1;     ///TP:0x6f800000 
+	high_memory = __va(arm_lowmem_limit - 1) + 1;     ///TP:0x4f800000 
 
 	/*
 	 * Round the memblock limit down to a section size.  This
