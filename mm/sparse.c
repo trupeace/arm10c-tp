@@ -549,7 +549,7 @@ void __init sparse_init(void)
 	if (!usemap_map)
 		panic("can not allocate usemap_map\n");
 	alloc_usemap_and_memmap(sparse_early_usemaps_alloc_node,
-							(void *)usemap_map);	///alloc 64B usemap for each section
+							(void *)usemap_map);	///TP: alloc 64B(=128*4b) usemap for each section
 
 #ifdef CONFIG_SPARSEMEM_ALLOC_MEM_MAP_TOGETHER
 	size2 = sizeof(struct page *) * NR_MEM_SECTIONS;
@@ -571,12 +571,12 @@ void __init sparse_init(void)
 #ifdef CONFIG_SPARSEMEM_ALLOC_MEM_MAP_TOGETHER
 		map = map_map[pnum];
 #else
-		map = sparse_early_mem_map_alloc(pnum);
+		map = sparse_early_mem_map_alloc(pnum);		///TP: alloc struct(page) * 0x10000
 #endif
 		if (!map)
 			continue;
 
-		sparse_init_one_section(__nr_to_section(pnum), pnum, map,	///TP: __nr_to_section(pnum): &mem_section[0][section]
+		sparse_init_one_section(__nr_to_section(pnum), pnum, map,	///TP: __nr_to_section(pnum): &mem_section[0][section], map: struct(page) * 0x10000
 								usemap);	///TP: usemap: 64B=128*4b for each section, usemap_map[section]
 	}
 

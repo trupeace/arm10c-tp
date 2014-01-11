@@ -79,7 +79,7 @@
 	extern __PCPU_ATTRS(sec) __typeof__(type) name
 
 #define DEFINE_PER_CPU_SECTION(type, name, sec)				\
-	__PCPU_ATTRS(sec) PER_CPU_DEF_ATTRIBUTES			\
+	__PCPU_ATTRS(sec) PER_CPU_DEF_ATTRIBUTES	/*///TP: section ".data..percpu"*/			\
 	__typeof__(type) name
 #endif
 

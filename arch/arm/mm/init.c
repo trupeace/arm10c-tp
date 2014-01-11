@@ -259,9 +259,9 @@ static void __init arm_bootmem_free(unsigned long min, unsigned long max_low,
 	 * to do anything fancy with the allocation of this memory
 	 * to the zones, now is the time to do it.
 	 */
-	zone_size[0] = max_low - min;
+	zone_size[0] = max_low - min;			///TP: lowmem:  0x2f800
 #ifdef CONFIG_HIGHMEM
-	zone_size[ZONE_HIGHMEM] = max_high - max_low;
+	zone_size[ZONE_HIGHMEM] = max_high - max_low;	///TP: highmem: 0x5f800
 #endif
 
 	/*
@@ -275,7 +275,7 @@ static void __init arm_bootmem_free(unsigned long min, unsigned long max_low,
 
 		if (start < max_low) {
 			unsigned long low_end = min(end, max_low);
-			zhole_size[0] -= low_end - start;
+			zhole_size[0] -= low_end - start;	///TP: hole size = total_max - sum of (real memblock size)
 		}
 #ifdef CONFIG_HIGHMEM
 		if (end > max_low) {
@@ -292,10 +292,10 @@ static void __init arm_bootmem_free(unsigned long min, unsigned long max_low,
 	 */
 	if (arm_dma_zone_size)
 		arm_adjust_dma_zone(zone_size, zhole_size,
-			arm_dma_zone_size >> PAGE_SHIFT);
+			arm_dma_zone_size >> PAGE_SHIFT);	///TP: split zone[0] into normal & dma
 #endif
 
-	free_area_init_node(0, zone_size, min, zhole_size);
+	free_area_init_node(0/*nid*/, zone_size, min, zhole_size);
 }
 
 #ifdef CONFIG_HAVE_ARCH_PFN_VALID
@@ -409,7 +409,7 @@ void __init bootmem_init(void)
 	/*
 	 * sparse_init() needs the bootmem allocator up and running.
 	 */
-	sparse_init();
+	sparse_init();	///TP: alloc mem_map & use_map for each section
 
 	/*
 	 * Now free the memory - free_area_init_node needs

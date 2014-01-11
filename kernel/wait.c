@@ -12,7 +12,7 @@
 
 void __init_waitqueue_head(wait_queue_head_t *q, const char *name, struct lock_class_key *key)
 {
-	spin_lock_init(&q->lock);
+	spin_lock_init(&q->lock);	///TP: .raw_lock = __ARCH_SPIN_LOCK_UNLOCKED
 	lockdep_set_class_and_name(&q->lock, key, name);
 	INIT_LIST_HEAD(&q->task_list);
 }

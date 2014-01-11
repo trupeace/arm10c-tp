@@ -40,7 +40,7 @@
  * empty_zero_page is a special page that is used for
  * zero-initialized data and COW.
  */
-struct page *empty_zero_page;
+struct page *empty_zero_page;	///TP: page entry address set by setup_arch().paging_init()
 EXPORT_SYMBOL(empty_zero_page);
 
 /*
@@ -1341,7 +1341,7 @@ void __init paging_init(const struct machine_desc *mdesc)
 	dma_contiguous_remap();	///TP: for ZONE_DMA(?), currently do nothing, if dtb has some boot commands such as early_init, may reserve DMA related memory and add it to static vm list
 	devicemaps_init(mdesc);	///TP: cp & map exception_vector, map iotable. set static_vmlist...
 	kmap_init();		///TP: alloc 2nd pt for kmap@VA:0xbfe00000
-	tcm_init();
+	tcm_init();		///TP: exynos5 has no TCM-> do nothing
 
 	top_pmd = pmd_off_k(0xffff0000);
 

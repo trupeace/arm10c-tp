@@ -207,8 +207,8 @@ static char * const zone_names[MAX_NR_ZONES] = {
 int min_free_kbytes = 1024;
 int user_min_free_kbytes;
 
-static unsigned long __meminitdata nr_kernel_pages;
-static unsigned long __meminitdata nr_all_pages;
+static unsigned long __meminitdata nr_kernel_pages;	///TP: (low+dma+zone_movable) mem pages, set by free_area_init_core()
+static unsigned long __meminitdata nr_all_pages;	///TP: all(kernel+high mem) pages, set by free_area_init_core()
 static unsigned long __meminitdata dma_reserve;
 
 #ifdef CONFIG_HAVE_MEMBLOCK_NODE_MAP
@@ -3704,7 +3704,7 @@ static void build_zonelist_cache(pg_data_t *pgdat)
  * Other parts of the kernel may not check if the zone is available.
  */
 static void setup_pageset(struct per_cpu_pageset *p, unsigned long batch);
-static DEFINE_PER_CPU(struct per_cpu_pageset, boot_pageset);
+static DEFINE_PER_CPU(struct per_cpu_pageset, boot_pageset);	///TP: section ".data..percpu"
 static void setup_zone_pageset(struct zone *zone);
 
 /*
@@ -3836,7 +3836,7 @@ static inline unsigned long wait_table_hash_nr_entries(unsigned long pages)
 	pages /= PAGES_PER_WAITQUEUE;
 
 	while (size < pages)
-		size <<= 1;
+		size <<= 1;	///TP: size=0x400 for 0x2f800(low mem pages)
 
 	/*
 	 * Once we have dozens or even hundreds of threads sleeping
@@ -3878,7 +3878,7 @@ static inline unsigned long wait_table_hash_nr_entries(unsigned long pages)
  */
 static inline unsigned long wait_table_bits(unsigned long size)
 {
-	return ffz(~size);
+	return ffz(~size);	///TP: find_first_zero(~0x400) = 10	
 }
 
 #define LONG_ALIGN(x) (((x)+(sizeof(long))-1)&~((sizeof(long))-1))
@@ -4048,7 +4048,7 @@ void __meminit memmap_init_zone(unsigned long size, int nid, unsigned long zone,
 static void __meminit zone_init_free_lists(struct zone *zone)
 {
 	int order, t;
-	for_each_migratetype_order(order, t) {
+	for_each_migratetype_order(order, t) {	///TP: doubled for combination of (zone_order(11), MIGRATE_TYPES(4))
 		INIT_LIST_HEAD(&zone->free_area[order].free_list[t]);
 		zone->free_area[order].nr_free = 0;
 	}
@@ -4089,7 +4089,7 @@ static int __meminit zone_batchsize(struct zone *zone)
 	 */
 	batch = rounddown_pow_of_two(batch + batch/2) - 1;
 
-	return batch;
+	return batch;	///TP: free page handling unit buddy system 
 
 #else
 	/* The deferral and batching of frees should be suppressed under NOMMU
@@ -4214,7 +4214,7 @@ void __init setup_per_cpu_pageset(void)
 		setup_zone_pageset(zone);
 }
 
-static noinline __init_refok
+static noinline __init_refok	///TP: noinline __section(.ref.text)
 int zone_wait_table_init(struct zone *zone, unsigned long zone_size_pages)
 {
 	int i;
@@ -4226,9 +4226,9 @@ int zone_wait_table_init(struct zone *zone, unsigned long zone_size_pages)
 	 * per zone.
 	 */
 	zone->wait_table_hash_nr_entries =
-		 wait_table_hash_nr_entries(zone_size_pages);
+		 wait_table_hash_nr_entries(zone_size_pages);	///TP: 0x400
 	zone->wait_table_bits =
-		wait_table_bits(zone->wait_table_hash_nr_entries);
+		wait_table_bits(zone->wait_table_hash_nr_entries);	///TP: 10
 	alloc_size = zone->wait_table_hash_nr_entries
 					* sizeof(wait_queue_head_t);
 
@@ -4269,7 +4269,7 @@ static __meminit void zone_pcp_init(struct zone *zone)
 	if (zone->present_pages)
 		printk(KERN_DEBUG "  %s zone: %lu pages, LIFO batch:%u\n",
 			zone->name, zone->present_pages,
-					 zone_batchsize(zone));
+					 zone_batchsize(zone));		///TP: batch: free page handling unit buddy system 
 }
 
 int __meminit init_currently_empty_zone(struct zone *zone,
@@ -4277,12 +4277,12 @@ int __meminit init_currently_empty_zone(struct zone *zone,
 					unsigned long size,
 					enum memmap_context context)
 {
-	struct pglist_data *pgdat = zone->zone_pgdat;
+	struct pglist_data *pgdat = zone->zone_pgdat;	///TP: &contig_page_data
 	int ret;
-	ret = zone_wait_table_init(zone, size);
+	ret = zone_wait_table_init(zone, size);	///TP: alloc and init wait_table
 	if (ret)
-		return ret;
-	pgdat->nr_zones = zone_idx(zone) + 1;
+		return ret;	///TP: error!
+	pgdat->nr_zones = zone_idx(zone) + 1;	///TP: current idx+1. Q: &[1] - &[0]=?1
 
 	zone->zone_start_pfn = zone_start_pfn;
 
@@ -4292,7 +4292,7 @@ int __meminit init_currently_empty_zone(struct zone *zone,
 			(unsigned long)zone_idx(zone),
 			zone_start_pfn, (zone_start_pfn + size));
 
-	zone_init_free_lists(zone);
+	zone_init_free_lists(zone);	///TP: init zone.free_area[].free_list[]
 
 	return 0;
 }
@@ -4602,7 +4602,7 @@ static void __meminit calculate_node_totalpages(struct pglist_data *pgdat,
 		totalpages += zone_spanned_pages_in_node(pgdat->node_id, i,
 							 node_start_pfn,
 							 node_end_pfn,
-							 zones_size);
+							 zones_size);	///TP: sum of zones_size[i]
 	pgdat->node_spanned_pages = totalpages;
 
 	realtotalpages = totalpages;
@@ -4727,33 +4727,33 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 	unsigned long zone_start_pfn = pgdat->node_start_pfn;
 	int ret;
 
-	pgdat_resize_init(pgdat);
+	pgdat_resize_init(pgdat);	///TP: ifdef CONFIG_MEMORY_HOTPLUG, spinlock_init
 #ifdef CONFIG_NUMA_BALANCING
 	spin_lock_init(&pgdat->numabalancing_migrate_lock);
 	pgdat->numabalancing_migrate_nr_pages = 0;
 	pgdat->numabalancing_migrate_next_window = jiffies;
 #endif
-	init_waitqueue_head(&pgdat->kswapd_wait);
+	init_waitqueue_head(&pgdat->kswapd_wait);	///TP: init lock, task_list
 	init_waitqueue_head(&pgdat->pfmemalloc_wait);
-	pgdat_page_cgroup_init(pgdat);
+	pgdat_page_cgroup_init(pgdat);	/// ifdef CONFIG_MEMCG,
 
 	for (j = 0; j < MAX_NR_ZONES; j++) {
 		struct zone *zone = pgdat->node_zones + j;
 		unsigned long size, realsize, freesize, memmap_pages;
 
 		size = zone_spanned_pages_in_node(nid, j, node_start_pfn,
-						  node_end_pfn, zones_size);
+						  node_end_pfn, zones_size);	///TP: zones_size[j]
 		realsize = freesize = size - zone_absent_pages_in_node(nid, j,
 								node_start_pfn,
 								node_end_pfn,
-								zholes_size);
+								zholes_size);	///TP: zholes_size[j]
 
 		/*
 		 * Adjust freesize so that it accounts for how much memory
 		 * is used by this zone for memmap. This affects the watermark
 		 * and per-cpu initialisations
 		 */
-		memmap_pages = calc_memmap_size(size, realsize);
+		memmap_pages = calc_memmap_size(size, realsize);	///TP: spanned_pages * sizeof(struct page) in page count, 0x2f800 * 44B = 0x82a
 		if (freesize >= memmap_pages) {
 			freesize -= memmap_pages;
 			if (memmap_pages)
@@ -4773,7 +4773,7 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 		}
 
 		if (!is_highmem_idx(j))
-			nr_kernel_pages += freesize;
+			nr_kernel_pages += freesize;	///TP: low mem pages(?)
 		/* Charge for highmem memmap if there are enough kernel pages */
 		else if (nr_kernel_pages > memmap_pages * 2)
 			nr_kernel_pages -= memmap_pages;
@@ -4796,19 +4796,19 @@ static void __paginginit free_area_init_core(struct pglist_data *pgdat,
 		zone->name = zone_names[j];
 		spin_lock_init(&zone->lock);
 		spin_lock_init(&zone->lru_lock);
-		zone_seqlock_init(zone);
+		zone_seqlock_init(zone);	///TP: ifdef CONFIG_MEMORY_HOTPLUG, init sequence count.
 		zone->zone_pgdat = pgdat;
-		zone_pcp_init(zone);
+		zone_pcp_init(zone);	///TP: zone->pageset = &boot_pageset;
 
 		/* For bootup, initialized properly in watermark setup */
 		mod_zone_page_state(zone, NR_ALLOC_BATCH, zone->managed_pages);
 
-		lruvec_init(&zone->lruvec);
+		lruvec_init(&zone->lruvec);	///TP: fill 0 and init list
 		if (!size)
 			continue;
 
-		set_pageblock_order();
-		setup_usemap(pgdat, zone, zone_start_pfn, size);
+		set_pageblock_order();	///TP: ifdef CONFIG_HUGETLB_PAGE_SIZE_VARIABLE,
+		setup_usemap(pgdat, zone, zone_start_pfn, size);	///TP: ifndef CONFIG_SPARSEMEM,
 		ret = init_currently_empty_zone(zone, zone_start_pfn,
 						size, MEMMAP_EARLY);
 		BUG_ON(ret);
@@ -4870,14 +4870,14 @@ void __paginginit free_area_init_node(int nid, unsigned long *zones_size,
 
 	pgdat->node_id = nid;
 	pgdat->node_start_pfn = node_start_pfn;
-	init_zone_allows_reclaim(nid);
+	init_zone_allows_reclaim(nid);		///TP only valid for NUMA
 #ifdef CONFIG_HAVE_MEMBLOCK_NODE_MAP
 	get_pfn_range_for_nid(nid, &start_pfn, &end_pfn);
 #endif
 	calculate_node_totalpages(pgdat, start_pfn, end_pfn,
-				  zones_size, zholes_size);
+				  zones_size, zholes_size);	///TP: set pgdat->node_spanned_pages(sum(zones_size[])),node_present_pages(sum(zones_size[])-sum(zholes_size[]))
 
-	alloc_node_mem_map(pgdat);
+	alloc_node_mem_map(pgdat);	///TP: only valid for CONFIG_FLAT_NODE_MEM_MAP
 #ifdef CONFIG_FLAT_NODE_MEM_MAP
 	printk(KERN_DEBUG "free_area_init_node: node %d, pgdat %08lx, node_mem_map %08lx\n",
 		nid, (unsigned long)pgdat,

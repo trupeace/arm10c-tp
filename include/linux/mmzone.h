@@ -23,7 +23,7 @@
 #ifndef CONFIG_FORCE_MAX_ZONEORDER
 #define MAX_ORDER 11
 #else
-#define MAX_ORDER CONFIG_FORCE_MAX_ZONEORDER
+#define MAX_ORDER CONFIG_FORCE_MAX_ZONEORDER	///TP:11
 #endif
 #define MAX_ORDER_NR_PAGES (1 << (MAX_ORDER - 1))
 
@@ -348,7 +348,7 @@ struct zone {
 	unsigned long		min_unmapped_pages;
 	unsigned long		min_slab_pages;
 #endif
-	struct per_cpu_pageset __percpu *pageset;
+	struct per_cpu_pageset __percpu *pageset;	///TP: &boot_pageset, set by zone_pcp_init()
 	/*
 	 * free areas of different sizes
 	 */
@@ -432,14 +432,14 @@ struct zone {
 	 * primary users of these fields, and in mm/page_alloc.c
 	 * free_area_init_core() performs the initialization of them.
 	 */
-	wait_queue_head_t	* wait_table;
+	wait_queue_head_t	* wait_table;	///TP: alloc & init by zone_wait_table_init()
 	unsigned long		wait_table_hash_nr_entries;
 	unsigned long		wait_table_bits;
 
 	/*
 	 * Discontig memory support fields.
 	 */
-	struct pglist_data	*zone_pgdat;
+	struct pglist_data	*zone_pgdat;	///TP: &contig_page_data
 	/* zone_start_pfn == zone_start_paddr >> PAGE_SHIFT */
 	unsigned long		zone_start_pfn;
 
@@ -486,8 +486,8 @@ struct zone {
 	 * touching zone->managed_pages and totalram_pages.
 	 */
 	unsigned long		spanned_pages;
-	unsigned long		present_pages;
-	unsigned long		managed_pages;
+	unsigned long		present_pages;	///TP: real size
+	unsigned long		managed_pages;	///TP: free size
 
 	/*
 	 * rarely used fields:
@@ -747,13 +747,13 @@ typedef struct pglist_data {
 	spinlock_t node_size_lock;
 #endif
 	unsigned long node_start_pfn;
-	unsigned long node_present_pages; /* total number of physical pages */
-	unsigned long node_spanned_pages; /* total size of physical page
-					     range, including holes */
+	unsigned long node_present_pages; /* total number of physical pages */	///TP: set by calculate_node_totalpages()
+	unsigned long node_spanned_pages; /* total size of physical page	
+					     range, including holes */	///TP: set by calculate_node_totalpages()
 	int node_id;
 	nodemask_t reclaim_nodes;	/* Nodes allowed to reclaim from */
-	wait_queue_head_t kswapd_wait;
-	wait_queue_head_t pfmemalloc_wait;
+	wait_queue_head_t kswapd_wait;		///TP: init by free_area_init_core()
+	wait_queue_head_t pfmemalloc_wait;	///TP: init by free_area_init_core()
 	struct task_struct *kswapd;	/* Protected by lock_memory_hotplug() */
 	int kswapd_max_order;
 	enum zone_type classzone_idx;

@@ -68,7 +68,7 @@ extern void __init_waitqueue_head(wait_queue_head_t *q, const char *name, struct
 
 #define init_waitqueue_head(q)				\
 	do {						\
-		static struct lock_class_key __key;	\
+		static struct lock_class_key __key;	/*///TP: valid only when CONFIG_LOCKDEP*/	\
 							\
 		__init_waitqueue_head((q), #q, &__key);	\
 	} while (0)
