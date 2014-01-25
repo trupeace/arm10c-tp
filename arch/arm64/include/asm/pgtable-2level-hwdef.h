@@ -23,8 +23,13 @@
  * entry representing 512MB. The user and kernel address spaces are limited to
  * 4TB in the 64KB page configuration.
  */
+<<<<<<< HEAD
 #define PTRS_PER_PTE		8192	///TP: 512MB=8192*64kB, 1 page
 #define PTRS_PER_PGD		8192	///TP: 4  TB=8192*512MB
+=======
+#define PTRS_PER_PTE		8192
+#define PTRS_PER_PGD		8192
+>>>>>>> linux-3.13.y
 
 /*
  * PGDIR_SHIFT determines the size a top-level page table entry can map.

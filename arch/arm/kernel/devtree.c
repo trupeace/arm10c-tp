@@ -171,7 +171,20 @@ void __init arm_dt_init_cpu_maps(void)
 
 bool arch_match_cpu_phys_id(int cpu, u64 phys_id)
 {
-	return (phys_id & MPIDR_HWID_BITMASK) == cpu_logical_map(cpu);
+	return phys_id == cpu_logical_map(cpu);
+}
+
+static const void * __init arch_get_next_mach(const char *const **match)
+{
+	static const struct machine_desc *mdesc = __arch_info_begin;
+	const struct machine_desc *m = mdesc;
+
+	if (m >= __arch_info_end)
+		return NULL;
+
+	mdesc++;
+	*match = m->dt_compat;
+	return m;
 }
 
 /**
@@ -183,11 +196,7 @@ bool arch_match_cpu_phys_id(int cpu, u64 phys_id)
  */
 const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)	///TP: dt_phys=__atags_pointer
 {
-	struct boot_param_header *devtree;
 	const struct machine_desc *mdesc, *mdesc_best = NULL;
-	unsigned int score, mdesc_score = ~1;
-	unsigned long dt_root;
-	const char *model;
 
 #ifdef CONFIG_ARCH_MULTIPLATFORM
 	DT_MACHINE_START(GENERIC_DT, "Generic DT based system")
@@ -196,11 +205,12 @@ const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)	///TP
 	mdesc_best = &__mach_desc_GENERIC_DT;
 #endif
 
-	if (!dt_phys)
+	if (!dt_phys || !early_init_dt_scan(phys_to_virt(dt_phys)))
 		return NULL;
 
-	devtree = phys_to_virt(dt_phys);
+	mdesc = of_flat_dt_match_machine(mdesc_best, arch_get_next_mach);
 
+<<<<<<< HEAD
 	/* check device tree validity */
 	///TP: dtb has magic number d00dfeed in big endian format
 	if (be32_to_cpu(devtree->magic) != OF_DT_HEADER)	///TP: if little-endian, swap byte, if hw supports,  use 'rev' instruction 
@@ -221,12 +231,17 @@ const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)	///TP
 		}
 	}
 	if (!mdesc_best) {	///TP: if can't find matched dtb, arch_info_list(machine_desc[])
+=======
+	if (!mdesc) {
+>>>>>>> linux-3.13.y
 		const char *prop;
 		long size;
+		unsigned long dt_root;
 
 		early_print("\nError: unrecognized/unsupported "
 			    "device tree compatible list:\n[ ");
 
+		dt_root = of_get_flat_dt_root();
 		prop = of_get_flat_dt_prop(dt_root, "compatible", &size);
 		while (size > 0) {
 			early_print("'%s' ", prop);
@@ -238,6 +253,7 @@ const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)	///TP
 		dump_machine_table(); /* does not return */
 	}
 
+<<<<<<< HEAD
 	model = of_get_flat_dt_prop(dt_root, "model", NULL);
 	if (!model)
 		model = of_get_flat_dt_prop(dt_root, "compatible", NULL);
@@ -256,4 +272,10 @@ const struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)	///TP
 	__machine_arch_type = mdesc_best->nr;			///TP: for DT case, 0xffffffff, otherwise, MACH_TYPE_type, nr=architecture number
 
 	return mdesc_best;      ///TP:machine_desc * in .arch.info.init
+=======
+	/* Change machine number to match the mdesc we're using */
+	__machine_arch_type = mdesc->nr;
+
+	return mdesc;
+>>>>>>> linux-3.13.y
 }

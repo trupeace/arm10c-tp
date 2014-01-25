@@ -46,7 +46,11 @@
 #else
 #define VA_BITS			(39)
 #endif
+<<<<<<< HEAD
 #define PAGE_OFFSET		(UL(0xffffffffffffffff) << (VA_BITS - 1))	///TP: 0xffffffc0_00000000, assumption: not use 64kB page
+=======
+#define PAGE_OFFSET		(UL(0xffffffffffffffff) << (VA_BITS - 1))
+>>>>>>> linux-3.13.y
 #define MODULES_END		(PAGE_OFFSET)
 #define MODULES_VADDR		(MODULES_END - SZ_64M)
 #define EARLYCON_IOBASE		(MODULES_VADDR - SZ_4M)

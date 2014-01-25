@@ -73,6 +73,8 @@ __setup("fpe=", fpe_setup);
 #endif
 
 extern void paging_init(const struct machine_desc *desc);
+extern void early_paging_init(const struct machine_desc *,
+			      struct proc_info_list *);
 extern void sanity_check_meminfo(void);
 extern enum reboot_mode reboot_mode;
 extern void setup_dma_zone(const struct machine_desc *desc);
@@ -603,7 +605,13 @@ static void __init setup_processor(void)
 	elf_hwcap &= ~(HWCAP_THUMB | HWCAP_IDIVT);
 #endif
 
+<<<<<<< HEAD
 	feat_v6_fixup();	///TP: Main ID 0x410fc0f0
+=======
+	erratum_a15_798181_init();
+
+	feat_v6_fixup();
+>>>>>>> linux-3.13.y
 
 	cacheid_init();	///TP: set cacheid, cacheid=CACHEID_VIPT_NONALIASING | CACHEID_PIPT
 	cpu_init();	///TP; setup stack(svc,irq,fiq,...) for each cpu, and percpu offset(TPIDRPRW)
@@ -623,9 +631,10 @@ void __init dump_machine_table(void)
 		/* can't use cpu_relax() here as it may require MMU setup */;
 }
 
-int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
+int __init arm_add_memory(u64 start, u64 size)
 {
 	struct membank *bank = &meminfo.bank[meminfo.nr_banks];
+	u64 aligned_start;
 
 	if (meminfo.nr_banks >= NR_BANKS) {	///TP:for ARM NR_BANKS = 8
 		printk(KERN_CRIT "NR_BANKS too low, "
@@ -637,11 +646,22 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 	 * Ensure that start/size are aligned to a page boundary.
 	 * Size is appropriately rounded down, start is rounded up.
 	 */
+<<<<<<< HEAD
 	size -= start & ~PAGE_MASK;	///TP: mask page=4kB
 	bank->start = PAGE_ALIGN(start);
+=======
+	size -= start & ~PAGE_MASK;
+	aligned_start = PAGE_ALIGN(start);
 
-#ifndef CONFIG_ARM_LPAE
-	if (bank->start + size < bank->start) {
+#ifndef CONFIG_ARCH_PHYS_ADDR_T_64BIT
+	if (aligned_start > ULONG_MAX) {
+		printk(KERN_CRIT "Ignoring memory at 0x%08llx outside "
+		       "32-bit physical address space\n", (long long)start);
+		return -EINVAL;
+	}
+>>>>>>> linux-3.13.y
+
+	if (aligned_start + size > ULONG_MAX) {
 		printk(KERN_CRIT "Truncating memory at 0x%08llx to fit in "
 			"32-bit physical address space\n", (long long)start);
 		/*
@@ -649,10 +669,11 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 		 * 32 bits, we use ULONG_MAX as the upper limit rather than 4GB.
 		 * This means we lose a page after masking.
 		 */
-		size = ULONG_MAX - bank->start;
+		size = ULONG_MAX - aligned_start;
 	}
 #endif
 
+	bank->start = aligned_start;
 	bank->size = size & ~(phys_addr_t)(PAGE_SIZE - 1);
 
 	/*
@@ -673,8 +694,8 @@ int __init arm_add_memory(phys_addr_t start, phys_addr_t size)
 static int __init early_mem(char *p)
 {
 	static int usermem __initdata = 0;
-	phys_addr_t size;
-	phys_addr_t start;
+	u64 size;
+	u64 start;
 	char *endp;
 
 	/*
@@ -866,8 +887,11 @@ void __init setup_arch(char **cmdline_p)
 	machine_desc = mdesc;
 	machine_name = mdesc->name;
 
+<<<<<<< HEAD
 	setup_dma_zone(mdesc);	///TP: ifdef CONFIG_ZONE_DMA, setup dma zone limit, size
 
+=======
+>>>>>>> linux-3.13.y
 	if (mdesc->reboot_mode != REBOOT_HARD)
 		reboot_mode = mdesc->reboot_mode;
 
@@ -882,9 +906,18 @@ void __init setup_arch(char **cmdline_p)
 
 	parse_early_param();	///TP run early init when bootargs have "console" or any "ealrycon" is declared using __setup() or early_param() macros
 
+<<<<<<< HEAD
 	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);	///TP: lib/sort.c, heapsort, sort meminfo.bank[] by start pfn(page frame number) address is full range unsigned 32b, which makes 32b compare fail, thus use pfn!!!
 	sanity_check_meminfo();		///TP: split meminfo to lowmem & highmem
 	arm_memblock_init(&meminfo, mdesc);	///TP: refering meminfo, init memblock.memory and reserve memblock.reserved for kernel, dtb, DMA, video buffer, ...
+=======
+	sort(&meminfo.bank, meminfo.nr_banks, sizeof(meminfo.bank[0]), meminfo_cmp, NULL);
+
+	early_paging_init(mdesc, lookup_processor_type(read_cpuid_id()));
+	setup_dma_zone(mdesc);
+	sanity_check_meminfo();
+	arm_memblock_init(&meminfo, mdesc);
+>>>>>>> linux-3.13.y
 
 	paging_init(mdesc);
 	request_standard_resources(mdesc);
@@ -980,6 +1013,7 @@ static const char *hwcap_str[] = {
 	"idivt",
 	"vfpd32",
 	"lpae",
+	"evtstrm",
 	NULL
 };
 

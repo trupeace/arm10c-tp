@@ -115,8 +115,13 @@ ENTRY(__cpu_setup)
 	dsb	sy
 
 	mov	x0, #3 << 20
+<<<<<<< HEAD
 	msr	cpacr_el1, x0			// Enable FP/ASIMD	///TP: notrap for FP/SIMD instructions,  cpacr: CP(Trace,FP,A-SIMD) access control reg
 	msr	mdscr_el1, xzr			// Reset mdscr_el1	///TP: clear monitor debug system control reg
+=======
+	msr	cpacr_el1, x0			// Enable FP/ASIMD
+	msr	mdscr_el1, xzr			// Reset mdscr_el1
+>>>>>>> linux-3.13.y
 	/*
 	 * Memory region attributes for LPAE:
 	 *
@@ -167,4 +172,8 @@ ENDPROC(__cpu_setup)
 	.type	crval, #object
 crval:
 	.word	0x000802e2			// clear
+<<<<<<< HEAD
 	.word	0x0405d11d			// set		///TP: final: 0x34d5d91d
+=======
+	.word	0x0405d11d			// set
+>>>>>>> linux-3.13.y

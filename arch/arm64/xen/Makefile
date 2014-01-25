@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #
 # arch/arm64/Makefile
 #
@@ -80,3 +81,7 @@ define archhelp
   echo  '                  (distribution) /sbin/installkernel or'
   echo  '                  install to $$(INSTALL_PATH) and run lilo'
 endef
+=======
+xen-arm-y	+= $(addprefix ../../arm/xen/, enlighten.o grant-table.o p2m.o mm.o)
+obj-y		:= xen-arm.o hypercall.o
+>>>>>>> linux-3.13.y
